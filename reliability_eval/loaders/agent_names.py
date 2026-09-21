@@ -23,8 +23,22 @@ def get_model_category(agent_name: str) -> str:
     return best_match
 
 
+# Scaffold-sweep agents (slurm/lib.sh): taubench_<prefix>_<model slug>, same model
+# as taubench_toolcalling_<model slug> under a different agent loop.
+SCAFFOLD_PREFIXES = {
+    "tctf": "tool-calling, tool faults",
+    "react": "ReAct",
+    "ocode": "opencode",
+    "cxcli": "Codex CLI",
+    "ccode": "Claude Code",
+}
+_SCAFFOLD_RE = re.compile(r"^taubench_(" + "|".join(SCAFFOLD_PREFIXES) + r")_")
+
+
 def get_model_metadata(agent_name: str) -> dict:
     """Get metadata for a model, with fallback for unknown models."""
+    if agent_name not in MODEL_METADATA:
+        agent_name = _SCAFFOLD_RE.sub("taubench_toolcalling_", agent_name)
     return MODEL_METADATA.get(agent_name, {"date": "2024-01-01", "provider": "Unknown"})
 
 
@@ -35,6 +49,9 @@ def get_provider(agent_name: str) -> str:
 
 def strip_agent_prefix(name: str) -> str:
     """Strip scaffold prefixes from agent name and convert to natural readable format."""
+    m = _SCAFFOLD_RE.match(name)
+    if m:
+        return f"{strip_agent_prefix(_SCAFFOLD_RE.sub('taubench_toolcalling_', name))} [{SCAFFOLD_PREFIXES[m.group(1)]}]"
     # Remove common scaffold prefixes
     name = re.sub(r"^taubench_codex[-_]", "", name)
     name = re.sub(r"^taubench_toolcalling[-_]", "", name)
@@ -68,6 +85,18 @@ def strip_agent_prefix(name: str) -> str:
         "claude_sonnet_4_5": "Claude 4.5 Sonnet",
         "claude_opus_4_5": "Claude 4.5 Opus",
         "claude_opus_4_7": "Claude 4.7 Opus",
+        # Open-weight models (self-hosted via vLLM)
+        "qwen3_30b_a3b": "Qwen3 30B-A3B (Instruct 2507)",
+        "qwen3_8b": "Qwen3 8B",
+        "qwen3_4b": "Qwen3 4B (Instruct 2507)",
+        "gpt_oss_20b": "gpt-oss 20B",
+        "gpt_oss_120b": "gpt-oss 120B",
+        "qwen3_5_35b_a3b": "Qwen3.5 35B-A3B",
+        "qwen3_5_9b": "Qwen3.5 9B",
+        "gemma4_26b_a4b": "Gemma 4 26B-A4B",
+        "glm47_flash": "GLM-4.7 Flash",
+        "olmo31_32b": "OLMo 3.1 32B",
+        "llama33_70b_fp8": "Llama 3.3 70B (FP8)",
     }
 
     return display_names.get(name, name)

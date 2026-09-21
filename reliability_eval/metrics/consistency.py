@@ -39,6 +39,32 @@ def compute_outcome_consistency(task_successes: list[int]) -> float:
     return float(consistency_outcome)
 
 
+def compute_outcome_consistency_legacy(
+    task_successes: list[int], epsilon: float = EPSILON
+) -> float:
+    """
+    Pre-PR#179 outcome consistency (steverab fork at 22f7a1d), kept for
+    side-by-side reporting only. NOT used in any aggregate.
+
+    Formula: 1 - sigma_hat^2 / (p_hat * (1 - p_hat) + epsilon), clipped to [0, 1],
+    where sigma_hat^2 is the *sample* variance (ddof=1).
+
+    Because the sample variance is divided by the population variance, the ratio
+    is K/(K-1) > 1 whenever runs disagree, so at K=5 anything short of unanimity
+    clips to 0 and the metric degenerates into a unanimity indicator.
+    """
+    K = len(task_successes)
+    if K < 2:
+        return np.nan
+
+    p_hat = np.mean(task_successes)
+    sigma_hat_sq = np.var(task_successes, ddof=1)
+
+    consistency_outcome = 1 - sigma_hat_sq / (p_hat * (1 - p_hat) + epsilon)
+
+    return float(np.clip(consistency_outcome, 0.0, 1.0))
+
+
 def compute_trajectory_consistency_conditioned(
     trajectories: list[list[str]], successes: list[int]
 ) -> float:
@@ -364,6 +390,7 @@ def compute_consistency_metrics(baseline_runs: list[dict]) -> dict:
     if len(baseline_runs) < 2:
         return {
             "consistency_outcome": np.nan,
+            "consistency_outcome_legacy": np.nan,
             "consistency_trajectory_distribution": np.nan,
             "consistency_trajectory_sequence": np.nan,
             "consistency_confidence": np.nan,
@@ -479,6 +506,7 @@ def compute_consistency_metrics(baseline_runs: list[dict]) -> dict:
     # Compute per-task metrics
     task_rows = []
     all_consistency_outcome = []
+    all_consistency_outcome_legacy = []  # Pre-PR#179 formula, reported side by side
     all_consistency_trajectory_distribution = []  # Distribution-based trajectory consistency
     all_consistency_trajectory_sequence = []  # Sequence-based trajectory consistency
     all_consistency_confidence = []  # Confidence consistency
@@ -491,6 +519,10 @@ def compute_consistency_metrics(baseline_runs: list[dict]) -> dict:
         # consistency_outcome: Normalized outcome consistency
         consistency_outcome = compute_outcome_consistency(data["success"])
         all_consistency_outcome.append(consistency_outcome)
+        consistency_outcome_legacy = compute_outcome_consistency_legacy(
+            data["success"]
+        )
+        all_consistency_outcome_legacy.append(consistency_outcome_legacy)
 
         # consistency_trajectory_distribution: Distribution-based trajectory consistency (what actions)
         consistency_trajectory_distribution_success = (
@@ -538,6 +570,7 @@ def compute_consistency_metrics(baseline_runs: list[dict]) -> dict:
                 "success_rate": float(np.mean(data["success"])),
                 "n_runs": len(data["success"]),
                 "consistency_outcome": consistency_outcome,
+                "consistency_outcome_legacy": consistency_outcome_legacy,
                 "consistency_trajectory_distribution": consistency_trajectory_distribution_success,
                 "consistency_trajectory_sequence": consistency_trajectory_sequence_success,
                 "consistency_confidence": consistency_confidence,
@@ -598,6 +631,10 @@ def compute_consistency_metrics(baseline_runs: list[dict]) -> dict:
         if all_consistency_outcome
         else np.nan,
         "consistency_outcome_se": _se(all_consistency_outcome),
+        "consistency_outcome_legacy": np.mean(all_consistency_outcome_legacy)
+        if all_consistency_outcome_legacy
+        else np.nan,
+        "consistency_outcome_legacy_se": _se(all_consistency_outcome_legacy),
         "consistency_trajectory_distribution": np.mean(
             all_consistency_trajectory_distribution
         )

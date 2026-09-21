@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -44,8 +45,8 @@ def load_environment():
 
 def check_api_keys():
     """Check that required API keys are available for configured models."""
-    # Always required
-    required_vars = ["WANDB_API_KEY"]
+    # Always required (unless tracing is kept local)
+    required_vars = [] if os.getenv("WEAVE_DISABLED") == "1" else ["WANDB_API_KEY"]
 
     # Check which providers are in use
     providers_in_use = {cfg.get("provider", "openai") for cfg in AGENT_CONFIGS}
@@ -77,6 +78,9 @@ def check_api_keys():
     if missing:
         print(f"\n⚠️  Warning: Missing API keys: {', '.join(missing)}")
         print("   Some evaluations may fail.")
+        if not sys.stdin.isatty():
+            print("   Non-interactive session; continuing.")
+            return
         response = input("   Continue anyway? (y/n): ")
         if response.lower() != "y":
             exit(1)
@@ -140,6 +144,8 @@ def build_base_command(
         "--max_concurrent",
         str(max_concurrent or benchmark_config.get("max_concurrent", 1)),
     ]
+    for k, v in agent_config.get("extra_agent_args", {}).items():
+        cmd.extend(["-A", f"{k}={v}"])
 
     # Only add --max_tasks if explicitly set (None means run all tasks)
     if max_tasks is not None:

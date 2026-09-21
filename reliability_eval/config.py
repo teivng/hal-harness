@@ -6,6 +6,18 @@ Edit BENCHMARK_CONFIGS to specify which benchmarks to run on.
 
 from reliability_eval.constants import TAUBENCH_AIRLINE_CLEAN_TASKS
 
+# Shared agent args for the self-hosted open-weight rows (vLLM, OpenAI-compatible).
+# The agent model is served at api_base; the user simulator runs on a separate
+# local server and is always Qwen/Qwen3-32B so that all four rows share one
+# environment.
+_VLLM_EXTRA_AGENT_ARGS = {
+    "api_base": "http://127.0.0.1:8001/v1",
+    "api_key": "EMPTY",
+    "user_model": "Qwen/Qwen3-32B",
+    "user_provider": "openai",
+    "confidence_max_tokens": 4096,
+}
+
 # =============================================================================
 # AGENT CONFIGURATION
 # =============================================================================
@@ -548,6 +560,122 @@ AGENT_CONFIGS = [
         "benchmarks": ["taubench_airline"],
     },
     # -------------------------------------------------------------------------
+    # Open-weight models (Tau-Bench) — self-hosted via vLLM
+    # The agent model is served on an OpenAI-compatible endpoint (api_base);
+    # the user simulator (and paraphraser / judge) is a separate local
+    # Qwen/Qwen3-32B server. extra_agent_args is forwarded by the runner.
+    # -------------------------------------------------------------------------
+    {
+        "name": "taubench_toolcalling_qwen3_30b_a3b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "Qwen/Qwen3-30B-A3B-Instruct-2507",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_qwen3_8b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "Qwen/Qwen3-8B",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_qwen3_4b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "Qwen/Qwen3-4B-Instruct-2507",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_gpt_oss_20b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "gpt-oss-20b",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_gpt_oss_120b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "gpt-oss-120b",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_qwen3_5_35b_a3b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "Qwen/Qwen3.5-35B-A3B",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_qwen3_5_9b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "Qwen/Qwen3.5-9B",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_gemma4_26b_a4b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "google/gemma-4-26B-A4B-it",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_glm47_flash",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "zai-org/GLM-4.7-Flash",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_olmo31_32b",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "allenai/Olmo-3.1-32B-Instruct",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    {
+        "name": "taubench_toolcalling_llama33_70b_fp8",
+        "agent_dir": "agents/taubench_tool_calling",
+        "agent_function": "tool_calling.run",
+        "model_name": "RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic",
+        "provider": "openai",
+        "task_timeout": 1200,
+        "benchmarks": ["taubench_airline"],
+        "extra_agent_args": _VLLM_EXTRA_AGENT_ARGS,
+    },
+    # -------------------------------------------------------------------------
     # Google Gemini Models (Tau-Bench) — via OpenRouter
     # Routes through OpenRouter to bypass tier-1 Gemini API rate limits.
     # -------------------------------------------------------------------------
@@ -600,7 +728,10 @@ BENCHMARK_CONFIGS = {
         "benchmark_name": "taubench_airline",
         "requires_docker": False,
         "requires_vm": False,
-        "max_concurrent": 5,  # Can run in parallel
+        # One slot per task: the clean subset has 26 tasks and the self-hosted
+        # vLLM servers batch requests, so running all 26 episodes concurrently
+        # keeps the GPU busy instead of serialising on 5 slow HTTP round trips.
+        "max_concurrent": 26,
         "task_ids": TAUBENCH_AIRLINE_CLEAN_TASKS,
         "compliance_constraints": [
             "pii_handling_customer_service",  # Customer service context - legitimate PII exchange allowed

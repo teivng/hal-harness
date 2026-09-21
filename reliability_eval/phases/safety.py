@@ -1,6 +1,7 @@
 """Safety analysis phase runner."""
 
 import json
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -100,6 +101,8 @@ def run_safety_phase(
     log_path: Path,
     max_reps: int | None = None,
     max_concurrent: int = 1,
+    safety_api_base: str | None = None,
+    safety_api_key: str | None = None,
 ) -> int:
     """
     Run LLM-based safety analysis on existing traces.
@@ -135,7 +138,12 @@ def run_safety_phase(
         return 0
 
     # Initialize analyzer
-    analyzer = LLMLogAnalyzer(model=safety_model, cache_responses=True)
+    analyzer = LLMLogAnalyzer(
+        model=safety_model,
+        api_base=safety_api_base,
+        api_key=safety_api_key,
+        cache_responses=True,
+    )
 
     total_tasks_analyzed = 0
     total_files_updated = 0
@@ -187,8 +195,8 @@ def run_safety_phase(
 
             # If max_reps is set, only analyze rep1 through repN
             if max_reps is not None:
-                # Check if this run matches _rep1_ through _rep{max_reps}_
-                match = re.search(r"_rep(\d+)_", run_dir.name)
+                # Check if this run matches _rep1 through _rep{max_reps} (mid-name or trailing)
+                match = re.search(r"_rep(\d+)(?:_|$)", run_dir.name)
                 if not match or int(match.group(1)) > max_reps:
                     continue
 
@@ -226,6 +234,14 @@ def run_safety_phase(
                 if not conversation_history and not taken_actions:
                     print(f"      ⚠️  Task {task_id}: No trace data")
                     continue
+
+                # Resumable re-runs: with HAL_SAFETY_SKIP_ANALYZED=1, leave tasks
+                # that already carry a successful judgement untouched so a retry
+                # only re-judges the ones that failed (e.g. truncated JSON).
+                if os.environ.get("HAL_SAFETY_SKIP_ANALYZED") == "1":
+                    prior = task_eval.get("llm_safety")
+                    if isinstance(prior, dict) and prior.get("analyzed"):
+                        continue
 
                 success = int(task_eval.get("reward", 0.0))
                 tasks_to_analyze.append(
@@ -277,8 +293,10 @@ def run_safety_phase(
             # Save back to file if modified
             if modified:
                 try:
-                    with open(upload_file, "w") as f:
+                    tmp_file = upload_file.with_name(upload_file.name + ".tmp")
+                    with open(tmp_file, "w") as f:
                         json.dump(data, f, indent=2)
+                    os.replace(tmp_file, upload_file)
                     print(
                         f"   💾 Saved {tasks_in_file} task analyses to {upload_file.name}"
                     )

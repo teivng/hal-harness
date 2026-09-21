@@ -1,6 +1,7 @@
 """Abstention phase runner for reliability_eval."""
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -194,8 +195,10 @@ def run_abstention_phase(
             # Save back to file if modified
             if modified:
                 try:
-                    with open(upload_file, "w") as f:
+                    tmp_file = upload_file.with_name(upload_file.name + ".tmp")
+                    with open(tmp_file, "w") as f:
                         json.dump(data, f, indent=2)
+                    os.replace(tmp_file, upload_file)
                     print(
                         f"   💾 Saved {tasks_in_file} task analyses to {upload_file.name}"
                     )

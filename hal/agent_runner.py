@@ -3,15 +3,41 @@ import json
 import weave
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Set, Tuple
 from .benchmark_manager import BenchmarkManager
 from .utils.local_runner import LocalRunner
 from .utils.docker_runner import DockerRunner
 from .utils.logging_utils import create_progress
 from .utils.weave_utils import delete_calls
+from .utils.local_trace import clear_task_traces
 from .utils.fault_injection import FaultInjector
 
 logger = logging.getLogger(__name__)
+
+
+def load_raw_submissions(submissions_file: str) -> Tuple[Dict[str, Any], Set[str]]:
+    """Replay a RAW_SUBMISSIONS.jsonl in order.
+
+    Returns (previous_output, completed_tasks): a later line for the same task
+    supersedes an earlier one in previous_output, and a task counts as
+    completed if any of its lines is a non-ERROR result.
+    """
+    completed_tasks = set()
+    previous_output = {}
+    with open(submissions_file) as f:
+        for line in f:
+            try:
+                submission = json.loads(line.strip())
+                task_id = list(submission.keys())[0]
+                result = submission[task_id]
+                # Only count as completed if not an error
+                if not isinstance(result, str) or not result.startswith("ERROR"):
+                    completed_tasks.add(task_id)
+                previous_output.update(submission)
+            except json.JSONDecodeError as e:
+                logger.warning(f"Skipping malformed line in submissions file: {e}")
+                continue
+    return previous_output, completed_tasks
 
 
 class AgentRunner:
@@ -188,25 +214,7 @@ class AgentRunner:
 
         try:
             # Load completed tasks from submissions file
-            completed_tasks = set()
-            previous_output = {}
-            with open(submissions_file) as f:
-                for line in f:
-                    try:
-                        submission = json.loads(line.strip())
-                        task_id = list(submission.keys())[0]
-                        result = submission[task_id]
-                        # Only count as completed if not an error
-                        if not isinstance(result, str) or not result.startswith(
-                            "ERROR"
-                        ):
-                            completed_tasks.add(task_id)
-                        previous_output.update(submission)
-                    except json.JSONDecodeError as e:
-                        logger.warning(
-                            f"Skipping malformed line in submissions file: {e}"
-                        )
-                        continue
+            _, completed_tasks = load_raw_submissions(submissions_file)
 
             # Filter out completed tasks
             remaining_tasks = {
@@ -227,6 +235,15 @@ class AgentRunner:
         # Initialize logging for main run
         logger.info("Initializing logging with W&B Weave...")
         weave_client = weave.init(self.run_id)
+        # With Weave off, task subprocesses trace their LLM calls to disk instead
+        # (hal.utils.local_trace); the dir is inherited through the environment.
+        local_trace_dir = None
+        if os.getenv("WEAVE_DISABLED") == "1":
+            local_trace_dir = os.path.join(
+                self.benchmark.get_run_dir(self.run_id), "local_traces"
+            )
+            os.makedirs(local_trace_dir, exist_ok=True)
+            os.environ["HAL_LOCAL_TRACE_DIR"] = local_trace_dir
 
         # Get dataset and filter for remaining tasks if continuing
         dataset = self.benchmark.get_dataset()
@@ -280,7 +297,9 @@ class AgentRunner:
 
             prompt_field = get_prompt_field_for_benchmark(self.benchmark.benchmark_name)
             generator = PromptVariationGenerator(
-                num_variations=self.num_variations, strength=self.variation_strength
+                model_name=os.getenv("HAL_PARAPHRASE_MODEL", "gpt-4o-mini-2024-07-18"),
+                num_variations=self.num_variations,
+                strength=self.variation_strength,
             )
 
             if self.variation_index is not None:
@@ -309,7 +328,9 @@ class AgentRunner:
                 )
 
         # delete previous calls from previous run if continuing for remaining tasks
-        if self.continue_run and not self.ignore_errors and dataset:
+        if self.continue_run and not self.ignore_errors and dataset and local_trace_dir:
+            clear_task_traces(local_trace_dir, dataset)
+        elif self.continue_run and not self.ignore_errors and dataset:
             logger.info("Cleaning up calls from previous run...")
             # Fetch all calls once instead of once per task (O(1) vs O(N) API calls)
             all_calls = weave_client.get_calls()
@@ -445,25 +466,16 @@ class AgentRunner:
                         progress=progress,
                     )
 
-                # If continuing run, merge with previous results
-                if self.continue_run:
-                    results_path = os.path.join(
-                        self.benchmark.get_run_dir(self.run_id),
-                        f"{self.run_id}_RAW_SUBMISSIONS.jsonl",
-                    )
-                    if os.path.exists(results_path):
-                        previous_output = {}
-                        with open(results_path) as f:
-                            for line in f:
-                                try:
-                                    submission = json.loads(line.strip())
-                                    previous_output.update(submission)
-                                except json.JSONDecodeError as e:
-                                    logger.warning(
-                                        f"Skipping malformed line in submissions file: {e}"
-                                    )
-                                    continue
-                        agent_output.update(previous_output)
+            # If continuing run, merge with previous results (normal mode and
+            # single-variation mode, which has been reset to normal mode above)
+            if self.continue_run and not self.prompt_sensitivity:
+                results_path = os.path.join(
+                    self.benchmark.get_run_dir(self.run_id),
+                    f"{self.run_id}_RAW_SUBMISSIONS.jsonl",
+                )
+                if os.path.exists(results_path):
+                    previous_output, _ = load_raw_submissions(results_path)
+                    agent_output.update(previous_output)
 
         logger.info("Evaluating results...")
 

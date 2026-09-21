@@ -1687,7 +1687,10 @@ def plot_safety_lambda_sensitivity(
     # Shared legend
     handles, labels = axes[0].get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    fig.legend(
+    # No safety data for any agent yet (e.g. post-hoc phase not run): an empty
+    # legend makes matplotlib raise "number sections must be larger than 0".
+    if by_label:
+      fig.legend(
         by_label.values(),
         by_label.keys(),
         loc="upper center",

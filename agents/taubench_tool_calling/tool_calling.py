@@ -2,6 +2,7 @@ import json
 import asyncio
 from typing import Dict, Optional
 import os
+import sys
 import time
 
 # Reliability metric utilities
@@ -12,6 +13,11 @@ from hal.utils.taubench_perturbations import (
     create_taubench_perturbator,
 )
 from hal.utils.llm_log_analyzer import LLMLogAnalyzer
+
+# scaffolds.py sits next to this file; local_runner loads us by file path.
+_AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if _AGENT_DIR not in sys.path:
+    sys.path.insert(0, _AGENT_DIR)
 
 
 def _detect_abstention(
@@ -240,6 +246,14 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         fault_injector = FaultInjector(fault_rate=fault_rate)
         print(f"🔧 Fault injection enabled with rate={fault_rate}")
 
+    # Agent loop: tc (published protocol), react, or a CLI scaffold (scaffolds.py).
+    scaffold = kwargs.get("scaffold", "tc")
+    # fault_mode=llm (published protocol): faults wrap every litellm call, with
+    # simulated internal recovery. fault_mode=tool: tool calls fail before
+    # reaching the env and the agent sees the error, whatever the scaffold.
+    fault_mode = kwargs.get("fault_mode", "llm")
+    llm_fault_injector = fault_injector if fault_mode == "llm" else None
+
     # Initialize ComplianceMonitor if enabled
     compliance_monitor: Optional[ComplianceMonitor] = None
     if (
@@ -291,7 +305,20 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     env_provider = "openai"
 
     # Determine provider configuration based on model_name prefix
-    if "openrouter/" in kwargs["model_name"]:
+    if kwargs.get("api_base") or os.getenv("HAL_AGENT_API_BASE"):
+        # Self-hosted OpenAI-compatible endpoint (e.g. vLLM). Model name is the
+        # served id, passed verbatim. Only agent calls get this api_base; user
+        # simulation falls through to OPENAI_API_BASE / OPENAI_BASE_URL.
+        agent_provider = kwargs.get("provider", "openai")
+        api_base = kwargs.get("api_base") or os.getenv("HAL_AGENT_API_BASE")
+        api_key = (
+            kwargs.get("api_key")
+            or os.getenv("HAL_AGENT_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or "EMPTY"
+        )
+        model_name = kwargs["model_name"]
+    elif "openrouter/" in kwargs["model_name"]:
         # Use OpenRouter - strip the openrouter/ prefix
         agent_provider = "openai"
         api_base = "https://openrouter.ai/api/v1"
@@ -391,7 +418,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
                     )
 
         # Call the original function - with fault injection if enabled
-        if fault_injector and fault_injector.enabled:
+        if llm_fault_injector and llm_fault_injector.enabled:
             try:
                 response = fault_injector.wrap_call(
                     original_completion, *args, **completion_kwargs
@@ -486,7 +513,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         # Call the original function - with fault injection if enabled
         # Note: For async, we don't use wrap_call (which is sync). Instead we inject
         # faults manually to maintain async behavior.
-        if fault_injector and fault_injector.enabled:
+        if llm_fault_injector and llm_fault_injector.enabled:
             import random
 
             if random.random() < fault_injector.fault_rate:
@@ -673,16 +700,54 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         if summary["by_type"]:
             print(f"   By type: {summary['by_type']}")
 
-    ### YOUR AGENT CODE HERE ###
-    agent = ToolCallingAgent(
-        tools_info=perturbed_tools_info,
-        wiki=perturbed_wiki,
-        model=model_name,
-        provider=agent_provider,  # Use agent_provider for the agent (can be anthropic)
-        temperature=kwargs["temperature"] if "temperature" in kwargs else 0.0,
-    )
+    finalize_tool_faults = None
+    if fault_injector and fault_mode == "tool":
+        from scaffolds import install_tool_faults
 
-    output = agent.solve(isolated_env, task_index=input[task_id]["task_index"])
+        finalize_tool_faults = install_tool_faults(isolated_env, fault_injector)
+
+    ### YOUR AGENT CODE HERE ###
+    temperature = kwargs["temperature"] if "temperature" in kwargs else 0.0
+    if scaffold == "tc":
+        agent = ToolCallingAgent(
+            tools_info=perturbed_tools_info,
+            wiki=perturbed_wiki,
+            model=model_name,
+            provider=agent_provider,  # Use agent_provider for the agent (can be anthropic)
+            temperature=temperature,
+        )
+        output = agent.solve(isolated_env, task_index=input[task_id]["task_index"])
+    elif scaffold == "react":
+        from tau_bench.agents.chat_react_agent import ChatReActAgent
+
+        agent = ChatReActAgent(
+            tools_info=perturbed_tools_info,
+            wiki=perturbed_wiki,
+            model=model_name,
+            provider=agent_provider,
+            use_reasoning=True,
+            temperature=temperature,
+        )
+        output = agent.solve(isolated_env, task_index=input[task_id]["task_index"])
+    else:
+        from scaffolds import CLI_SCAFFOLDS, solve_cli
+
+        assert scaffold in CLI_SCAFFOLDS, f"unknown scaffold {scaffold!r}"
+        assert api_base, "CLI scaffolds need a self-hosted api_base"
+        output = solve_cli(
+            scaffold,
+            isolated_env,
+            tools_info=perturbed_tools_info,
+            wiki=perturbed_wiki,
+            task_index=input[task_id]["task_index"],
+            served_model=model_name,
+            api_base=api_base,
+            task_id=task_id,
+            context_window=int(kwargs.get("context_window", 65536)),
+        )
+
+    if finalize_tool_faults:
+        finalize_tool_faults()
 
     ### DETECT ABSTENTION/DEFERRAL BEHAVIOR ###
     # Always compute abstention detection (lightweight, rule-based)
@@ -712,6 +777,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             reward=isolated_env.reward,
             actions_taken=isolated_env.actions,
             original_completion_fn=original_completion,  # Use unwrapped litellm.completion
+            confidence_max_tokens=int(kwargs.get("confidence_max_tokens", 65536)),
         )
 
     ### COMPLIANCE CHECKING (OPTIONAL) ###
@@ -811,6 +877,11 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             "task": isolated_env.task.model_dump(),
         }
     }
+
+    if scaffold != "tc":
+        result[task_id]["scaffold"] = output.info.get("scaffold") or {"name": scaffold}
+    if fault_injector:
+        result[task_id]["fault_mode"] = fault_mode
 
     # Add confidence if computed
     if confidence is not None:
@@ -958,6 +1029,7 @@ def _compute_confidence_score(
     reward: float,
     actions_taken: list,
     original_completion_fn=None,  # Use original litellm.completion to avoid wrapper issues
+    confidence_max_tokens: int = 65536,
 ) -> float:
     """
     Compute confidence score via self-assessment.
@@ -1079,7 +1151,7 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
             "model": model_name,
             "messages": confidence_messages,
             "temperature": 0.0,
-            "max_tokens": 65536,  # Very high limit - reasoning models use internal thinking tokens
+            "max_tokens": confidence_max_tokens,  # Very high limit by default - reasoning models use internal thinking tokens
         }
 
         # Add provider for correct routing (gemini/ prefix alone may route to Vertex AI)

@@ -99,6 +99,13 @@ class LocalRunner:
             "timeout",
             "timed out",
             "connection",
+            # Self-hosted vLLM returns HTTP 500 when its output parser rejects a
+            # malformed generation (e.g. gpt-oss harmony headers). Continuous
+            # batching makes a retry a fresh sample even at temperature 0, so
+            # treat it like the 502/503/504 family that provider SDKs retry.
+            "500",
+            "internal server error",
+            "internalservererror",
             "502",
             "503",
             "504",
@@ -408,7 +415,13 @@ def init_weave_with_retry(run_id, max_retries=5, base_delay=2.0):
 try:
     # Initialize weave with retry logic
     init_weave_with_retry("{run_id}")
-    
+
+    # With Weave off (WEAVE_DISABLED=1) the harness sets HAL_LOCAL_TRACE_DIR and
+    # every litellm call of this task is traced to <dir>/<task_id>.jsonl instead.
+    if os.getenv("HAL_LOCAL_TRACE_DIR"):
+        from hal.utils.local_trace import install_litellm_trace
+        install_litellm_trace("{task_id}", os.environ["HAL_LOCAL_TRACE_DIR"])
+
     # Load input data
     with open("input.json", "r") as f:
         input_data = json.load(f)

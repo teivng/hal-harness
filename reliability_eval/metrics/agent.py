@@ -591,6 +591,14 @@ def analyze_agent(
         metrics.extra["consistency_outcome_se"] = consistency.get(
             "consistency_outcome_se", np.nan
         )
+        # Pre-PR#179 outcome-consistency formula, reported alongside the primary
+        # metric; not used in any aggregate.
+        metrics.extra["consistency_outcome_legacy"] = consistency.get(
+            "consistency_outcome_legacy", np.nan
+        )
+        metrics.extra["consistency_outcome_legacy_se"] = consistency.get(
+            "consistency_outcome_legacy_se", np.nan
+        )
         metrics.extra["consistency_trajectory_distribution_se"] = consistency.get(
             "consistency_trajectory_distribution_se", np.nan
         )
@@ -812,6 +820,9 @@ def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
                 "accuracy": m.accuracy,
                 # Consistency
                 "consistency_outcome": m.consistency_outcome,
+                "consistency_outcome_legacy": m.extra.get(
+                    "consistency_outcome_legacy", np.nan
+                ),
                 "consistency_trajectory_distribution": m.consistency_trajectory_distribution,
                 "consistency_trajectory_sequence": m.consistency_trajectory_sequence,
                 "consistency_confidence": m.consistency_confidence,
@@ -851,6 +862,9 @@ def metrics_to_dataframe(all_metrics: list[ReliabilityMetrics]) -> pd.DataFrame:
                 # Standard errors (for confidence bars)
                 "accuracy_se": m.extra.get("accuracy_se", np.nan),
                 "consistency_outcome_se": m.extra.get("consistency_outcome_se", np.nan),
+                "consistency_outcome_legacy_se": m.extra.get(
+                    "consistency_outcome_legacy_se", np.nan
+                ),
                 "consistency_trajectory_distribution_se": m.extra.get(
                     "consistency_trajectory_distribution_se", np.nan
                 ),

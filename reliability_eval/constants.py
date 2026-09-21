@@ -168,6 +168,52 @@ MODEL_METADATA = {
     },
     "gaia_generalist_claude_opus_4_5": {"date": "2025-11-24", "provider": "Anthropic"},
     "gaia_generalist_claude_opus_4_7": {"date": "2026-04-16", "provider": "Anthropic"},
+    # Open-weight models, self-hosted via vLLM (tool calling scaffold).
+    # Dates are the Hugging Face release dates of the served checkpoints.
+    "taubench_toolcalling_qwen3_30b_a3b": {  # Qwen/Qwen3-30B-A3B-Instruct-2507
+        "date": "2025-07-29",
+        "provider": "Alibaba",
+    },
+    "taubench_toolcalling_qwen3_8b": {  # Qwen/Qwen3-8B
+        "date": "2025-04-29",
+        "provider": "Alibaba",
+    },
+    "taubench_toolcalling_qwen3_4b": {  # Qwen/Qwen3-4B-Instruct-2507
+        "date": "2025-08-06",
+        "provider": "Alibaba",
+    },
+    "taubench_toolcalling_gpt_oss_20b": {  # openai/gpt-oss-20b
+        "date": "2025-08-05",
+        "provider": "OpenAI",
+    },
+    "taubench_toolcalling_gpt_oss_120b": {  # openai/gpt-oss-120b
+        "date": "2025-08-05",
+        "provider": "OpenAI",
+    },
+    "taubench_toolcalling_qwen3_5_35b_a3b": {  # Qwen/Qwen3.5-35B-A3B
+        "date": "2026-02-24",
+        "provider": "Alibaba",
+    },
+    "taubench_toolcalling_qwen3_5_9b": {  # Qwen/Qwen3.5-9B
+        "date": "2026-03-02",
+        "provider": "Alibaba",
+    },
+    "taubench_toolcalling_gemma4_26b_a4b": {  # google/gemma-4-26B-A4B-it
+        "date": "2026-04-02",
+        "provider": "Google",
+    },
+    "taubench_toolcalling_glm47_flash": {  # zai-org/GLM-4.7-Flash
+        "date": "2026-01-19",
+        "provider": "Zhipu",
+    },
+    "taubench_toolcalling_olmo31_32b": {  # allenai/Olmo-3.1-32B-Instruct
+        "date": "2025-12-15",
+        "provider": "Ai2",
+    },
+    "taubench_toolcalling_llama33_70b_fp8": {  # RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic
+        "date": "2024-12-06",
+        "provider": "Meta",
+    },
 }
 
 # Provider color palette
@@ -175,6 +221,10 @@ PROVIDER_COLORS = {
     "OpenAI": "#10A37F",
     "Google": "#4285F4",
     "Anthropic": "#D4A574",
+    "Alibaba": "#FF6A00",
+    "Zhipu": "#1F77B4",
+    "Ai2": "#E377C2",
+    "Meta": "#0866FF",
     "Unknown": "#999999",
 }
 
@@ -183,11 +233,26 @@ PROVIDER_MARKERS = {
     "OpenAI": "o",
     "Google": "s",
     "Anthropic": "^",
+    "Alibaba": "D",
+    "Zhipu": "v",
+    "Ai2": "P",
+    "Meta": "*",
     "Unknown": "x",
 }
 
-# Provider ordering
-PROVIDER_ORDER = {"OpenAI": 0, "Google": 1, "Anthropic": 2, "Unknown": 3}
+# Provider ordering. Every provider that appears in MODEL_METADATA must have an
+# entry: this dict is consumed via Series.map(), so a missing key yields NaN and
+# scrambles the sort order. "Unknown" stays last.
+PROVIDER_ORDER = {
+    "OpenAI": 0,
+    "Google": 1,
+    "Anthropic": 2,
+    "Alibaba": 3,
+    "Zhipu": 4,
+    "Ai2": 5,
+    "Meta": 6,
+    "Unknown": 7,
+}
 
 # Model size/type categories
 # Categories: 'small' (efficient models), 'large' (frontier models), 'reasoning' (reasoning-enhanced)
@@ -220,6 +285,20 @@ MODEL_CATEGORY = {
     "gemini_3_5_flash": "reasoning",
     "claude_opus_4_5": "reasoning",
     "claude_opus_4_7": "reasoning",
+    # Open-weight models (self-hosted). Keys are matched as the longest substring
+    # of the full agent name, so bare suffixes are enough; none of these is a
+    # substring of, or contains, another key.
+    "qwen3_4b": "small",
+    "qwen3_8b": "small",
+    "qwen3_30b_a3b": "large",
+    "gpt_oss_20b": "reasoning",
+    "gpt_oss_120b": "reasoning",
+    "qwen3_5_35b_a3b": "large",
+    "qwen3_5_9b": "small",
+    "gemma4_26b_a4b": "large",
+    "glm47_flash": "large",
+    "olmo31_32b": "large",
+    "llama33_70b_fp8": "large",
 }
 
 CATEGORY_COLORS = {

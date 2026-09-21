@@ -11,6 +11,8 @@ Variation Strength Levels:
 - naturalistic: Realistic user behavior (typos, abbreviations, informal speech)
 """
 
+import hashlib
+import json
 import os
 from typing import Dict, List, Any
 from enum import Enum
@@ -252,6 +254,19 @@ class PromptVariationGenerator:
             num_variations=self.num_variations, prompt=prompt
         )
 
+        # Optional on-disk cache (HAL_PARAPHRASE_CACHE=<dir>) so reruns reuse the
+        # same sampled variations instead of re-sampling at temperature 0.7-0.9.
+        cache_file = None
+        cache_dir = os.environ.get("HAL_PARAPHRASE_CACHE")
+        if cache_dir:
+            key = hashlib.sha1(
+                f"{self.model_name}\x00{self.strength.value}\x00{self.num_variations}\x00{prompt}".encode()
+            ).hexdigest()
+            cache_file = os.path.join(cache_dir, f"{key}.json")
+            if os.path.exists(cache_file):
+                with open(cache_file) as f:
+                    return json.load(f)
+
         try:
             # Use higher temperature for stronger variations
             temperature = {
@@ -295,6 +310,11 @@ class PromptVariationGenerator:
             # Note: Style directive is NOT prepended here - it should be injected
             # into the user simulator's system prompt by the agent code
             all_variations = [prompt] + variations
+
+            if cache_file:
+                os.makedirs(cache_dir, exist_ok=True)
+                with open(cache_file, "w") as f:
+                    json.dump(all_variations, f)
 
             return all_variations
 

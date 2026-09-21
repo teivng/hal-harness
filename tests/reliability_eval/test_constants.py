@@ -80,7 +80,7 @@ class TestModelConstants:
         for name, meta in MODEL_METADATA.items():
             assert "date" in meta, f"{name} missing 'date'"
             assert "provider" in meta, f"{name} missing 'provider'"
-            assert meta["provider"] in ("OpenAI", "Google", "Anthropic")
+            assert meta["provider"] in PROVIDER_ORDER, f"{name}: provider {meta['provider']!r} has no PROVIDER_ORDER entry"
 
     def test_model_category_values_are_valid(self):
         valid = {"small", "large", "reasoning"}

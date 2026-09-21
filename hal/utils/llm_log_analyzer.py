@@ -425,6 +425,12 @@ class LLMLogAnalyzer:
                 "litellm is required for LLM log analysis. Install with: pip install litellm"
             )
 
+        # Local judges (e.g. Qwen3-32B) write far longer evidence than gpt-4o and
+        # a truncated JSON reply is an unparseable, unanalyzed task. Allow the
+        # cap to be raised without changing the default.
+        import os as _os
+
+        max_tokens = int(_os.environ.get("HAL_JUDGE_MAX_TOKENS", max_tokens))
         kwargs = {
             "model": self.model,
             "messages": messages,

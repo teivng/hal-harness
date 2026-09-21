@@ -478,6 +478,60 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
+    # Self-hosted (vLLM) served names. Nominal serverless list rates so the cost
+    # channel stays non-zero; not real spend.
+    "openai/gpt-oss-20b": {
+        "prompt_tokens": 0.075 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "gpt-oss-20b": {
+        "prompt_tokens": 0.075 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },  # bare name: litellm strips an "openai/" prefix before it reaches vLLM
+    "Qwen/Qwen3-32B": {
+        "prompt_tokens": 0.29 / 1e6,
+        "completion_tokens": 0.59 / 1e6,
+    },
+    "Qwen/Qwen3-30B-A3B-Instruct-2507": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "Qwen/Qwen3-8B": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "Qwen/Qwen3-4B-Instruct-2507": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "gpt-oss-120b": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },  # bare name, same reason as gpt-oss-20b; "openai/gpt-oss-120b" is listed above
+    "Qwen/Qwen3.5-35B-A3B": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
+    "Qwen/Qwen3.5-9B": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "google/gemma-4-26B-A4B-it": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
+    "zai-org/GLM-4.7-Flash": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
+    "allenai/Olmo-3.1-32B-Instruct": {
+        "prompt_tokens": 0.2 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
+    "RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic": {
+        "prompt_tokens": 0.3 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
     "openrouter/anthropic/claude-opus-4": {
         "prompt_tokens": 15 / 1e6,
         "completion_tokens": 75 / 1e6,
@@ -908,6 +962,12 @@ def get_total_cost(client):
                 token_usage[k]["cache_read_input_tokens"] += cached_input
             progress.update(task, advance=1)
 
+    return cost_from_token_usage(token_usage), token_usage
+
+
+def cost_from_token_usage(token_usage: Dict[str, Dict[str, int]]) -> float:
+    """Price a {model: {prompt_tokens, completion_tokens, cache_creation_input_tokens,
+    cache_read_input_tokens}} dict with MODEL_PRICES_DICT; unpriced models count 0."""
     total_cost = 0
     for k, usage in token_usage.items():
         if k not in MODEL_PRICES_DICT:
@@ -929,7 +989,7 @@ def get_total_cost(client):
             + usage["cache_read_input_tokens"] * cache_read_price
             + usage["completion_tokens"] * prices.get("completion_tokens", 0)
         )
-    return total_cost, token_usage
+    return total_cost
 
 
 def compute_cost_from_inspect_usage(

@@ -195,6 +195,18 @@ Phases:
         help="LLM model for safety analysis (default: gpt-4o)",
     )
     parser.add_argument(
+        "--safety_api_base",
+        type=str,
+        default=None,
+        help="OpenAI-compatible API base for the safety model (default: provider default)",
+    )
+    parser.add_argument(
+        "--safety_api_key",
+        type=str,
+        default=None,
+        help="API key for --safety_api_base (default: provider env var)",
+    )
+    parser.add_argument(
         "--results_dir",
         type=str,
         default="results",
@@ -445,6 +457,8 @@ Phases:
             log_path,
             max_reps=k_runs,
             max_concurrent=args.max_concurrent,
+            safety_api_base=args.safety_api_base,
+            safety_api_key=args.safety_api_key,
         )
 
     if "abstention" in phases_to_run:

@@ -115,6 +115,20 @@ class TauBenchBenchmark(BaseBenchmark):
                     f"Structural perturbations enabled: type={perturbation_type}, strength={perturbation_strength}"
                 )
 
+    def get_dataset(self) -> Dict[str, Any]:
+        dataset = super().get_dataset()
+        # Override the hard-coded user simulator model from agent args. This
+        # lives here rather than __init__ because agent_args is assigned after
+        # construction (see AgentRunner.__init__).
+        user_model = self.agent_args.get("user_model")
+        if user_model:
+            for task in dataset.values():
+                task["user_model"] = user_model
+                task["user_provider"] = self.agent_args.get(
+                    "user_provider", task["user_provider"]
+                )
+        return dataset
+
     def evaluate_output(
         self, agent_output: Dict[str, Any], run_id: str
     ) -> Dict[str, Any]:

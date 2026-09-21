@@ -5,6 +5,7 @@ import os
 
 from datetime import datetime
 from ..utils.weave_utils import get_total_cost, get_weave_calls
+from ..utils.local_trace import load_local_traces
 from ..utils.utils import make_json_serializable, get_git_info, compute_agent_dir_hash
 import logging
 
@@ -174,9 +175,16 @@ class BaseBenchmark(ABC):
             if "step_count" in metrics:
                 task_step_counts[task_id] = metrics["step_count"]
 
-        # Get cost and usage metrics
-        total_cost, total_usage = get_total_cost(weave_client)
-        raw_logging, latency_dict = get_weave_calls(weave_client)
+        # Get cost and usage metrics. With WEAVE_DISABLED=1 the dummy weave
+        # client cannot be queried; the per-task JSONL written by
+        # hal.utils.local_trace under <run_dir>/local_traces replaces it.
+        if os.getenv("WEAVE_DISABLED") == "1":
+            total_cost, total_usage, raw_logging, latency_dict = load_local_traces(
+                os.path.join(run_dir, "local_traces")
+            )
+        else:
+            total_cost, total_usage = get_total_cost(weave_client)
+            raw_logging, latency_dict = get_weave_calls(weave_client)
 
         # Calculate prompt sensitivity metrics if enabled
         sensitivity_metrics = None
