@@ -14,10 +14,12 @@ from hal.utils.taubench_perturbations import (
 )
 from hal.utils.llm_log_analyzer import LLMLogAnalyzer
 
-# scaffolds.py sits next to this file; local_runner loads us by file path.
-_AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
-if _AGENT_DIR not in sys.path:
-    sys.path.insert(0, _AGENT_DIR)
+# The alternative agent loops live in the `rp` package (rp/scaffolds/), not in
+# this directory: they are experiment code with their own lifecycle, and this
+# file is the published protocol. local_runner copies this directory to a tmpdir
+# and spawns a bare `python`, so `rp` has to be importable from the venv that
+# owns hal-eval; hal-job.sbatch exports PYTHONPATH for that, and
+# `rp check imports` verifies it before any GPU time is spent.
 
 
 def _detect_abstention(
@@ -702,7 +704,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     finalize_tool_faults = None
     if fault_injector and fault_mode == "tool":
-        from scaffolds import install_tool_faults
+        from rp.scaffolds.bridge import install_tool_faults
 
         finalize_tool_faults = install_tool_faults(isolated_env, fault_injector)
 
@@ -730,7 +732,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         )
         output = agent.solve(isolated_env, task_index=input[task_id]["task_index"])
     else:
-        from scaffolds import CLI_SCAFFOLDS, solve_cli
+        from rp.scaffolds.bridge import CLI_SCAFFOLDS, solve_cli
 
         assert scaffold in CLI_SCAFFOLDS, f"unknown scaffold {scaffold!r}"
         assert api_base, "CLI scaffolds need a self-hosted api_base"
