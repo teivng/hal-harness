@@ -629,6 +629,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     from tau_bench.envs import get_env
     from tau_bench.agents.tool_calling_agent import ToolCallingAgent
+    from tau_bench.types import RESPOND_ACTION_NAME
 
     ### ENV SETUP (usually this should be untouched) ###
     isolated_env = get_env(
@@ -715,11 +716,18 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             # Call original step
             result = original_step(action)
 
-            # Perturb the response (tool output)
-            # The result is typically a string (JSON) that gets added to conversation
-            if isinstance(result, str):
-                perturbed_result = taubench_perturbator.perturb_tool_response(result)
-                return perturbed_result
+            # Perturb the response (tool output). Env.step returns an
+            # EnvResponse whose observation is the tool's (usually JSON) output;
+            # for `respond` it is the simulated customer's reply, not a tool
+            # response, so it passes through untouched.
+            if action.name != RESPOND_ACTION_NAME:
+                return result.model_copy(
+                    update={
+                        "observation": taubench_perturbator.perturb_tool_response(
+                            result.observation
+                        )
+                    }
+                )
 
             return result
 
