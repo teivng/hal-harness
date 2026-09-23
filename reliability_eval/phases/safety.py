@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
+from reliability_eval.loaders.actions import agent_actions
 from reliability_eval.types import EvaluationLog, RunResult
 
 
@@ -229,7 +230,7 @@ def run_safety_phase(
 
                 # Get conversation history and actions
                 conversation_history = task_eval.get("conversation_history", [])
-                taken_actions = task_eval.get("taken_actions", [])
+                taken_actions = agent_actions(task_eval)
 
                 if not conversation_history and not taken_actions:
                     print(f"      ⚠️  Task {task_id}: No trace data")

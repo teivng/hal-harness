@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+from reliability_eval.loaders.actions import agent_actions
 from reliability_eval.metrics.abstention import detect_abstention
 from reliability_eval.types import EvaluationLog, RunResult
 
@@ -128,7 +129,7 @@ def run_abstention_phase(
                 # Always recompute abstention (replace existing data if present)
                 # Get conversation history and actions
                 conversation_history = task_eval.get("conversation_history", [])
-                taken_actions = task_eval.get("taken_actions", [])
+                taken_actions = agent_actions(task_eval)
 
                 if not conversation_history:
                     # Try to get from other possible locations

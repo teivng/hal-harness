@@ -5,6 +5,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 
+from reliability_eval.loaders.actions import agent_actions
 from reliability_eval.loaders.agent_names import extract_agent_name
 from reliability_eval.loaders.gaia_task_levels import extract_gaia_task_levels
 
@@ -199,18 +200,22 @@ def extract_minimal_eval_data(raw_eval: dict) -> dict:
             minimal[task_id] = _failed_task_record(task_eval)
         elif isinstance(task_eval, dict):
             # Normal result format
-            # Extract only action names from taken_actions
+            # Extract only action names from the agent's own actions
             taken_actions = task_eval.get("taken_actions", [])
-            action_names = [
-                a.get("name", "") for a in taken_actions if isinstance(a, dict)
-            ]
+            actions = agent_actions(task_eval)
+            action_names = [a.get("name", "") for a in actions if isinstance(a, dict)]
 
             # Extract minimal confidence_details
             conf_details = task_eval.get("confidence_details", {})
             minimal_conf_details = {}
             if isinstance(conf_details, dict):
+                num_actions = conf_details.get("num_actions", 0)
+                # The agent counted the list it stored as taken_actions; recount
+                # it in the view agent_actions chose.
+                if num_actions == len(taken_actions):
+                    num_actions = len(actions)
                 minimal_conf_details = {
-                    "num_actions": conf_details.get("num_actions", 0),
+                    "num_actions": num_actions,
                     "num_errors": conf_details.get("num_errors", 0),
                     "parsed_score": conf_details.get("parsed_score"),
                 }

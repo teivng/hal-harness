@@ -223,6 +223,35 @@ def _install_anthropic_adaptive_thinking_patch():
     _anthropic_adaptive_patch_installed = True
 
 
+def _track_reward_replay(env):
+    """Tell the agent's actions apart from the reward replay in env.actions.
+
+    tau-bench's Env.calculate_reward scores an episode by replaying the task's
+    gold actions through env.step, which appends each of them to env.actions,
+    so after scoring env.actions ends with the answer key. This wraps
+    env.calculate_reward to snapshot env.actions on entry, before the replay.
+    It only passes the call through, so it chains with any other wrapper on
+    the same env (e.g. the tool-fault one), installed before or after it.
+
+    Returns split() -> (agent_actions, reward_replay_actions).
+    """
+    inner_reward = env.calculate_reward
+    snapshot = []
+
+    def calculate_reward():
+        # The first scoring ends the episode; keep its snapshot.
+        if not snapshot:
+            snapshot.append(list(env.actions))
+        return inner_reward()
+
+    def split():
+        agent = snapshot[0] if snapshot else list(env.actions)
+        return agent, env.actions[len(agent) :]
+
+    env.calculate_reward = calculate_reward
+    return split
+
+
 def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     assert "model_name" in kwargs, "model_name is required"
     assert "provider" in kwargs, "provider is required. choose from openai or anthropic"
@@ -708,6 +737,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
         finalize_tool_faults = install_tool_faults(isolated_env, fault_injector)
 
+    split_actions = _track_reward_replay(isolated_env)
+
     ### YOUR AGENT CODE HERE ###
     temperature = kwargs["temperature"] if "temperature" in kwargs else 0.0
     if scaffold == "tc":
@@ -751,11 +782,13 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if finalize_tool_faults:
         finalize_tool_faults()
 
+    agent_actions, reward_replay_actions = split_actions()
+
     ### DETECT ABSTENTION/DEFERRAL BEHAVIOR ###
     # Always compute abstention detection (lightweight, rule-based)
     abstention_result = _detect_abstention(
         conversation_history=output.messages if hasattr(output, "messages") else [],
-        actions_taken=isolated_env.actions,
+        actions_taken=agent_actions,
     )
     if abstention_result["abstained"]:
         print(
@@ -777,7 +810,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             task_description=isolated_env.task.model_dump(),
             conversation_history=output.messages,
             reward=isolated_env.reward,
-            actions_taken=isolated_env.actions,
+            actions_taken=agent_actions,
             original_completion_fn=original_completion,  # Use unwrapped litellm.completion
             confidence_max_tokens=int(kwargs.get("confidence_max_tokens", 65536)),
         )
@@ -787,9 +820,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     if compliance_monitor:
         # Check agent output for compliance violations
         task_output_str = json.dumps(isolated_env.task.model_dump())
-        actions_str = json.dumps(
-            [action.model_dump() for action in isolated_env.actions]
-        )
+        actions_str = json.dumps([action.model_dump() for action in agent_actions])
 
         # Check for PII exposure in output
         if "no_pii_exposure" in compliance_monitor.constraints:
@@ -802,7 +833,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
         # Check for destructive operations
         if "no_destructive_ops" in compliance_monitor.constraints:
-            for action in isolated_env.actions:
+            for action in agent_actions:
                 action_str = (
                     str(action.model_dump())
                     if hasattr(action, "model_dump")
@@ -840,7 +871,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             conversation_history = (
                 output.messages if hasattr(output, "messages") else []
             )
-            actions_list = [action.model_dump() for action in isolated_env.actions]
+            actions_list = [action.model_dump() for action in agent_actions]
 
             # LLM-based compliance analysis
             if kwargs.get("llm_compliance") != "false":
@@ -875,7 +906,12 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     result = {
         task_id: {
             "reward": isolated_env.reward,
-            "taken_actions": [action.model_dump() for action in isolated_env.actions],
+            "taken_actions": [action.model_dump() for action in agent_actions],
+            # taken_actions + reward_replay_actions is what env.actions held,
+            # i.e. what this field stored before the two were split.
+            "reward_replay_actions": [
+                action.model_dump() for action in reward_replay_actions
+            ],
             "task": isolated_env.task.model_dump(),
         }
     }
