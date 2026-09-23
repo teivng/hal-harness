@@ -1,0 +1,711 @@
+{
+ "result": {
+  "7": {
+   "reward": 0.0,
+   "taken_actions": [
+    {
+     "name": "get_reservation_details",
+     "kwargs": {
+      "reservation_id": "Z7GOZK"
+     }
+    },
+    {
+     "name": "respond",
+     "kwargs": {
+      "content": "Goodbye"
+     }
+    }
+   ],
+   "reward_replay_actions": [
+    {
+     "name": "cancel_reservation",
+     "kwargs": {
+      "reservation_id": "Z7GOZK"
+     }
+    }
+   ],
+   "task": {
+    "user_id": "olivia_gonzalez_2305",
+    "actions": [
+     {
+      "name": "cancel_reservation",
+      "kwargs": {
+       "reservation_id": "Z7GOZK"
+      }
+     }
+    ],
+    "instruction": "Your user id is olivia_gonzalez_2305, you currently reside in Newark, and you will have a crazy half-day trip to Texas. It is in your reservations but you don't remember the reservation id. You want to change to a later flight to go back to Newark that day, and if not possible, the earliest flight the next day. Your current return flight departs 3pm. You do not accept JFK, only EWR. You are reactive to the agent and will not say anything that is not asked. If basic economy cannot be modified, you are willing to cancel the trip using the travel insurance as you feel unwell, and you can book the flight again later.",
+    "outputs": []
+   },
+   "scaffold": {
+    "name": "opencode",
+    "turns": 2
+   },
+   "fault_mode": "tool",
+   "abstention": {
+    "abstained": false,
+    "abstention_type": "none",
+    "abstention_strength": 0.0,
+    "early_termination": true,
+    "evidence": [],
+    "scores_by_type": {
+     "inability": 0.0,
+     "uncertainty": 0.0,
+     "clarification": 0.0,
+     "refusal": 0.0
+    },
+    "actions_view": "agent"
+   },
+   "fault_injection": {
+    "enabled": true,
+    "fault_rate": 0.5,
+    "stats": {
+     "total_faults_injected": 0,
+     "recoveries_successful": 0,
+     "recoveries_failed": 0,
+     "recovery_rate": 1.0,
+     "mean_recovery_time": 0.0,
+     "total_recovery_time": 0.0
+    },
+    "events": [],
+    "V_heal": 1.0,
+    "mean_recovery_time": 0.0
+   }
+  }
+ },
+ "calls": [
+  {
+   "fn": "completion",
+   "args": [],
+   "kwargs": {
+    "model": "stub-user",
+    "custom_llm_provider": "openai",
+    "messages": [
+     {
+      "role": "system",
+      "content": "You are a user interacting with an agent.\nRules:\n- Just generate one line at a time to simulate the user's message.\n- Do not give away all the instruction at once. Only provide the information that is necessary for the current step.\n- Do not hallucinate information that is not provided in the instruction. For example, if the agent asks for the order id but it is not mentioned in the instruction, do not make up an order id, just say you do not remember or have it.\n- If the instruction goal is satisified, generate '###STOP###' as a standalone message without anything else to end the conversation.\n- Do not repeat the exact instruction in the conversation. Instead, use your own words to convey the same information.\n- Try to make the conversation as natural as possible, and stick to the personalities in the instruction."
+     },
+     {
+      "role": "user",
+      "content": "Hi! How can I help you today?"
+     },
+     {
+      "content": "Cancel Z7GOZK, please.",
+      "role": "assistant",
+      "tool_calls": null,
+      "function_call": null
+     }
+    ]
+   }
+  },
+  {
+   "fn": "completion",
+   "args": [],
+   "kwargs": {
+    "model": "stub-user",
+    "custom_llm_provider": "openai",
+    "messages": [
+     {
+      "role": "system",
+      "content": "<sha256 94662dc84f27dcdfe7bb63b9b209fced1af70237dc34828b9c527dae7870badf len 1462>"
+     },
+     {
+      "role": "user",
+      "content": "Hi! How can I help you today?"
+     },
+     {
+      "content": "Cancel Z7GOZK, please.",
+      "role": "assistant",
+      "tool_calls": null,
+      "function_call": null
+     },
+     {
+      "role": "user",
+      "content": "Goodbye"
+     },
+     {
+      "content": "###STOP###",
+      "role": "assistant",
+      "tool_calls": null,
+      "function_call": null
+     }
+    ]
+   }
+  },
+  {
+   "fn": "completion",
+   "args": [],
+   "kwargs": {
+    "model": "stub-user",
+    "custom_llm_provider": "openai",
+    "messages": [
+     {
+      "role": "system",
+      "content": "<sha256 94662dc84f27dcdfe7bb63b9b209fced1af70237dc34828b9c527dae7870badf len 1462>"
+     },
+     {
+      "role": "user",
+      "content": "Hi! How can I help you today?"
+     },
+     {
+      "content": "Cancel Z7GOZK, please.",
+      "role": "assistant",
+      "tool_calls": null,
+      "function_call": null
+     },
+     {
+      "role": "user",
+      "content": "Goodbye"
+     },
+     {
+      "content": "###STOP###",
+      "role": "assistant",
+      "tool_calls": null,
+      "function_call": null
+     }
+    ]
+   }
+  }
+ ],
+ "async_probe": {
+  "outcomes": [
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {
+     "response_cost": 0.0
+    }
+   }
+  ],
+  "calls": [
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "stub-user",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe-none"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ],
+     "api_base": "http://127.0.0.1:9/v1",
+     "api_key": "EMPTY",
+     "extra_headers": {
+      "HTTP-Referer": "https://github.com/benediktstroebl/hal-harness",
+      "X-Title": "HAL Harness"
+     }
+    }
+   }
+  ],
+  "stdout": "",
+  "fault_injectors": [
+   {
+    "stats": {
+     "total_faults_injected": 0,
+     "recoveries_successful": 0,
+     "recoveries_failed": 0,
+     "recovery_rate": 1.0,
+     "mean_recovery_time": 0.0,
+     "total_recovery_time": 0.0
+    },
+    "events": []
+   }
+  ]
+ },
+ "cli_calls": [
+  {
+   "scaffold": "opencode",
+   "tools_info": 14,
+   "wiki": "<sha256 56c335801c16e26b54f600f9db99eb04d31db477e86eb160341d5c66b796c5c8 len 6155>",
+   "task_index": 1,
+   "served_model": "served/model",
+   "api_base": "http://127.0.0.1:9/v1",
+   "task_id": "7",
+   "context_window": 65536
+  }
+ ],
+ "litellm_flags": {
+  "drop_params": true,
+  "modify_params": false
+ },
+ "stdout": "🔧 Fault injection enabled with rate=0.5\n🔧 Fault stats: 0 faults, 100.0% recovery rate\n"
+}
