@@ -22,6 +22,7 @@ AGENT = "served/model"
 EMPTY_ARGS_AGENT = "served/empty-args"
 USER = "stub-user"
 API_BASE = "http://127.0.0.1:9/v1"
+AUX_BASE = "http://127.0.0.1:8/v1"  # the aux server litellm's defaults point at
 CONFIDENCE_OPENER = "You just completed a task."
 
 # What rp passes for each unit (rp resolve ... --json), as hal's CLI parses it.
@@ -102,6 +103,7 @@ SCENARIOS = {
         {},
     ),
     "tc_llm_analysis": ({**PUBLISHED, "enable_llm_analysis": True}, {}),
+    "tc_llm_analysis_no_endpoint": ({**PUBLISHED, "enable_llm_analysis": True}, {}),
     "tc_empty_tool_args": (
         {**PUBLISHED, **BASELINE, "model_name": EMPTY_ARGS_AGENT},
         {},
@@ -146,6 +148,13 @@ SCENARIOS = {
         {"provider": "openai", "model_name": AGENT, "user_model": USER},
         {},
     ),
+}
+
+
+# name -> the environment a scenario runs in, on top of the fixture's
+SCENARIO_ENV = {
+    "route_env_api_base": {"HAL_AGENT_API_BASE": API_BASE},
+    "tc_llm_analysis": {"OPENAI_BASE_URL": AUX_BASE},
 }
 
 

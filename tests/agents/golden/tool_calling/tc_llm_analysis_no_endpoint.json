@@ -1,0 +1,394 @@
+{
+ "result": {
+  "raised": "RuntimeError: enable_llm_analysis needs a self-hosted endpoint: set OPENAI_BASE_URL (or OPENAI_API_BASE) to the aux server; without one litellm would send the analysis to api.openai.com"
+ },
+ "calls": [],
+ "async_probe": {
+  "outcomes": [
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": null,
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   },
+   {
+    "message": {
+     "content": "pong",
+     "role": "assistant",
+     "tool_calls": null,
+     "function_call": null
+    },
+    "hidden_params": {}
+   }
+  ],
+  "calls": [
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "stub-user",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe-none"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   },
+   {
+    "fn": "acompletion",
+    "args": [],
+    "kwargs": {
+     "model": "served/model",
+     "messages": [
+      {
+       "role": "user",
+       "content": "probe"
+      }
+     ]
+    }
+   }
+  ],
+  "stdout": "",
+  "fault_injectors": []
+ },
+ "cli_calls": [],
+ "litellm_flags": {
+  "drop_params": true,
+  "modify_params": false
+ },
+ "stdout": ""
+}

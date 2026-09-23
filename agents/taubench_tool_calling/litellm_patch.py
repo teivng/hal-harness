@@ -59,8 +59,10 @@ def install_anthropic_adaptive_thinking_patch():
 
 
 class AgentRoute(NamedTuple):
-    """Where the agent's own calls go. User simulation never uses this: it
-    falls through to litellm's defaults (OPENAI_API_BASE / OPENAI_BASE_URL)."""
+    """Where the agent's own calls go. A call is the agent's when its model is
+    model_name, so user simulation falls through to litellm's defaults
+    (OPENAI_BASE_URL / OPENAI_API_BASE) unless the user model is served under
+    the agent's name, in which case its calls take this route too."""
 
     provider: str
     api_base: Optional[str]
@@ -151,14 +153,16 @@ def install_wrappers(
     original_acompletion = litellm.acompletion
 
     def prepare(completion_kwargs):
-        """Add OpenRouter configuration and reasoning parameters to agent calls."""
+        """Add the route's endpoint, key and headers, and reasoning parameters,
+        to agent calls."""
         # Check if this is a call with our agent's model
         is_agent_call = (
             "model" in completion_kwargs and completion_kwargs["model"] == model_name
         )
 
-        # Add OpenRouter base URL, API key, and headers only for agent model calls
-        # (not for user simulation calls, which use a different model like gpt-4o)
+        # Send agent calls to the route's api_base (self-hosted vLLM, OpenRouter,
+        # Together or Gemini) with its key and headers; other calls (the user
+        # simulator's, under a different model name) keep litellm's defaults.
         if api_base and is_agent_call:
             completion_kwargs["api_base"] = api_base
             completion_kwargs["api_key"] = api_key
@@ -240,9 +244,14 @@ def install_wrappers(
                 response = llm_fault_injector.wrap_call(
                     original_completion, *args, **completion_kwargs
                 )
-            except Exception as fault_error:
-                # Log the fault and re-raise
-                print(f"⚡ Fault injected: {type(fault_error).__name__}: {fault_error}")
+            except Exception as call_error:
+                # Not an injected fault: wrap_call turns those into a retry or a
+                # stand-in result and never raises them. This is the call
+                # itself failing while fault injection is on.
+                print(
+                    f"⚠️  LLM call failed under fault injection: "
+                    f"{type(call_error).__name__}: {call_error}"
+                )
                 raise
         else:
             response = original_completion(*args, **completion_kwargs)

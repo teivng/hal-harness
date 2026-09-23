@@ -42,8 +42,9 @@ import hal.utils.fault_injection as fault_injection
 from agents.taubench_tool_calling import tool_calling
 from tests.agents.scripted_llm import (
     AGENT,
-    API_BASE,
+    AUX_BASE,
     RESERVATION,
+    SCENARIO_ENV,
     SCENARIOS,
     TASK_INDEX,
     USER,
@@ -180,8 +181,8 @@ def _async_probe(monkeypatch):
 def _run(name, monkeypatch, capsys, scripted):
     calls, cli_calls, injectors = scripted
     kwargs = {"model_name": AGENT, **SCENARIOS[name][0]}
-    if name == "route_env_api_base":
-        monkeypatch.setenv("HAL_AGENT_API_BASE", API_BASE)
+    for var, value in SCENARIO_ENV.get(name, {}).items():
+        monkeypatch.setenv(var, value)
     random.seed(1234)
     try:
         result = tool_calling.run({TASK_ID: task_input(name)}, **kwargs)
@@ -314,3 +315,22 @@ def test_empty_tool_arguments_reach_the_env_as_an_empty_object(
     first = rec["conversation_history"][2]
     assert first["tool_calls"][0]["function"]["arguments"] == "{}"
     assert rec["taken_actions"][0] == {"name": "list_all_airports", "kwargs": {}}
+
+
+def test_llm_analysis_refuses_to_run_without_a_self_hosted_endpoint(
+    monkeypatch, capsys, scripted
+):
+    """Zero dollars: with no aux endpoint, litellm would send the default
+    gpt-4o-mini analysis to api.openai.com. run() raises before the episode."""
+    got = _run("tc_llm_analysis_no_endpoint", monkeypatch, capsys, scripted)
+    assert got["result"]["raised"].startswith("RuntimeError: enable_llm_analysis")
+    assert got["calls"] == []
+
+
+def test_llm_analysis_calls_go_to_the_aux_endpoint(monkeypatch, capsys, scripted):
+    got = _run("tc_llm_analysis", monkeypatch, capsys, scripted)
+    judged = [
+        c["kwargs"] for c in got["calls"] if c["kwargs"]["model"] == "gpt-4o-mini"
+    ]
+    assert len(judged) == 2
+    assert all(k["api_base"] == AUX_BASE for k in judged)

@@ -334,3 +334,29 @@ def test_in_run_compliance_monitor_ignores_the_reward_replay(offline, monkeypatc
 
     assert names(rec["reward_replay_actions"]) == ["cancel_reservation"]
     assert rec["compliance"]["violation_count"] == 0
+
+
+def test_run_calls_its_patch_surface(offline, monkeypatch):
+    """run() looks _track_reward_replay, _detect_abstention and
+    _compute_confidence_score up in tool_calling's globals, which is where the
+    tests above replace them; a replacement there must reach run()."""
+    called = []
+
+    def spy(name, real):
+        def wrapper(*args, **kwargs):
+            called.append(name)
+            return real(*args, **kwargs)
+
+        return wrapper
+
+    for name in ("_track_reward_replay", "_detect_abstention"):
+        monkeypatch.setattr(tool_calling, name, spy(name, getattr(tool_calling, name)))
+    monkeypatch.setattr(
+        tool_calling,
+        "_compute_confidence_score",
+        spy("_compute_confidence_score", lambda **kwargs: (0.5, {})),
+    )
+
+    run_episode(compute_confidence=True)
+
+    assert called == ["_track_reward_replay", "_detect_abstention", "_compute_confidence_score"]

@@ -4,8 +4,27 @@ sections of the result record that each reliability instrument contributes.
 """
 
 import json
+import os
 
 from hal.utils.llm_log_analyzer import LLMLogAnalyzer
+
+
+def llm_analysis_api_base() -> str:
+    """The endpoint the LLM log analysis calls: the aux server, as litellm's
+    OpenAI client would find it (OPENAI_BASE_URL, then OPENAI_API_BASE).
+
+    Raises when neither is set rather than let litellm fall back to
+    api.openai.com: the analysis model defaults to gpt-4o-mini, and data
+    collection must not reach a paid API.
+    """
+    api_base = os.getenv("OPENAI_BASE_URL") or os.getenv("OPENAI_API_BASE")
+    if not api_base:
+        raise RuntimeError(
+            "enable_llm_analysis needs a self-hosted endpoint: set OPENAI_BASE_URL "
+            "(or OPENAI_API_BASE) to the aux server; without one litellm would "
+            "send the analysis to api.openai.com"
+        )
+    return api_base
 
 
 def check_compliance(compliance_monitor, task, agent_actions) -> list:
@@ -45,8 +64,11 @@ def check_compliance(compliance_monitor, task, agent_actions) -> list:
     return compliance_violations
 
 
-def analyze_with_llm(kwargs: dict, conversation_history: list, agent_actions):
-    """LLM-based compliance and recovery analysis of the episode.
+def analyze_with_llm(
+    kwargs: dict, api_base: str, conversation_history: list, agent_actions
+):
+    """LLM-based compliance and recovery analysis of the episode, sent to
+    api_base (see llm_analysis_api_base).
 
     Returns (llm_compliance_result, llm_recovery_result); either is None when
     switched off or when the analysis fails.
@@ -57,7 +79,9 @@ def analyze_with_llm(kwargs: dict, conversation_history: list, agent_actions):
     print(f"🔍 Running LLM-based log analysis with {llm_analysis_model}...")
 
     try:
-        llm_analyzer = LLMLogAnalyzer(model=llm_analysis_model, cache_responses=False)
+        llm_analyzer = LLMLogAnalyzer(
+            model=llm_analysis_model, api_base=api_base, cache_responses=False
+        )
 
         # Prepare trace data
         actions_list = [action.model_dump() for action in agent_actions]
@@ -280,7 +304,7 @@ def compute_confidence_score(
     actions_taken: list,
     original_completion_fn=None,  # Use original litellm.completion to avoid wrapper issues
     confidence_max_tokens: int = 65536,
-) -> float:
+) -> tuple[float, dict]:
     """
     Compute confidence score via self-assessment.
 
@@ -298,7 +322,7 @@ def compute_confidence_score(
         actions_taken: List of actions executed
 
     Returns:
-        Confidence score in [0, 1]
+        (confidence score in [0, 1], confidence details)
     """
     import litellm
 
@@ -490,15 +514,16 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
             "model": model_name,
         }
 
-        # Note: The litellm.completion() call above is automatically traced by Weave
-        # if Weave is initialized. No manual logging needed - the confidence
-        # assessment will appear in Weave's trace alongside other LLM calls.
+        # The call above is traced like every other litellm call of the task:
+        # by hal/utils/local_trace.py's callback with Weave off, by Weave with it on.
 
         return confidence_score, confidence_details
 
     except Exception as e:
         print(f"Warning: Error computing confidence score: {e}")
-        # Return a heuristic-based confidence if API call fails
+        # Return a heuristic-based confidence if API call fails. run() stores
+        # it as the task's `confidence` like a model's answer, marked only by
+        # confidence_details["fallback"].
         # Use error rate and success as simple heuristic
         if num_actions == 0:
             heuristic_confidence = 0.1  # Very low confidence if no actions taken

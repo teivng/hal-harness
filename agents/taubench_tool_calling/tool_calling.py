@@ -18,7 +18,11 @@ else:
     import litellm_patch
     import postprocess
 
-# run() calls these through this module's globals, where tests replace them.
+# The patch surface. run() looks these three up in this module's globals, so a
+# test replaces them here (monkeypatch.setattr(tool_calling, "_detect_abstention",
+# ...)); replacing them in env_setup, postprocess or reliability_eval would not
+# reach run(). Everything else run() calls as an attribute of its module
+# (env_setup.make_env, ...), so it is replaced on that module.
 _track_reward_replay = env_setup.track_reward_replay
 _compute_confidence_score = postprocess.compute_confidence_score
 
@@ -43,7 +47,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # ========== RELIABILITY METRICS INITIALIZATION ==========
     fault_injector = env_setup.make_fault_injector(kwargs)
 
-    # Agent loop: tc (published protocol), react, or a CLI scaffold (scaffolds.py).
+    # Agent loop: tc (published protocol), react, or a CLI scaffold (rp.scaffolds.bridge).
     scaffold = kwargs.get("scaffold", "tc")
     # fault_mode=llm (published protocol): faults wrap every litellm call, with
     # simulated internal recovery. fault_mode=tool: tool calls fail before
@@ -53,6 +57,12 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
 
     compliance_monitor = env_setup.make_compliance_monitor(kwargs)
     taubench_perturbator = env_setup.make_perturbator(kwargs)
+    # Resolved before the episode, so a missing endpoint fails the task at once.
+    llm_analysis_api_base = (
+        postprocess.llm_analysis_api_base()
+        if env_setup.enabled(kwargs, "enable_llm_analysis")
+        else None
+    )
 
     # Separate providers for user simulation vs agent
     # User simulation needs OpenAI-compatible API (for tau-bench internals)
@@ -164,9 +174,9 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     ### LLM-BASED LOG ANALYSIS (OPTIONAL) ###
     llm_compliance_result = None
     llm_recovery_result = None
-    if env_setup.enabled(kwargs, "enable_llm_analysis"):
+    if llm_analysis_api_base:
         llm_compliance_result, llm_recovery_result = postprocess.analyze_with_llm(
-            kwargs, conversation_history, agent_actions
+            kwargs, llm_analysis_api_base, conversation_history, agent_actions
         )
 
     ### WHEN DONE WE RETURN THE ENV STATE ###
