@@ -5,7 +5,11 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from reliability_eval.loaders.actions import agent_actions
+from reliability_eval.loaders.actions import (
+    ACTIONS_VIEW_KEY,
+    actions_view,
+    agent_actions,
+)
 from reliability_eval.metrics.abstention import detect_abstention
 from reliability_eval.types import EvaluationLog, RunResult
 
@@ -158,6 +162,8 @@ def run_abstention_phase(
                         "early_termination": abstention_result["early_termination"],
                         "evidence": abstention_result["evidence"],
                         "scores_by_type": abstention_result["scores_by_type"],
+                        # which actions it was shown (loaders/actions.py)
+                        ACTIONS_VIEW_KEY: actions_view(),
                     }
 
                     modified = True

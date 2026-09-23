@@ -42,6 +42,8 @@ class ScriptedAgent:
     ends the episode and makes the env score it. Never cancels, so the gold
     cancel_reservation appears in env.actions only through the reward replay."""
 
+    reservation = RESERVATION
+
     def __init__(self, tools_info, **kwargs):
         self.tools_info = tools_info
 
@@ -57,8 +59,8 @@ class ScriptedAgent:
             {"role": "system", "content": "wiki"},
             {"role": "user", "content": "Hi"},
         ]
-        call = {"name": "get_reservation_details", "arguments": json.dumps({param: RESERVATION})}
-        tool = env.step(Action(name="get_reservation_details", kwargs={param: RESERVATION}))
+        call = {"name": "get_reservation_details", "arguments": json.dumps({param: self.reservation})}
+        tool = env.step(Action(name="get_reservation_details", kwargs={param: self.reservation}))
         messages += [
             {"role": "assistant", "content": "", "tool_calls": [{"id": "c0", "function": call}]},
             {"role": "tool", "tool_call_id": "c0", "content": tool.observation},
@@ -245,3 +247,90 @@ def test_non_struct_run_passes_tool_observations_through(offline):
     assert tool_obs == direct.observation
     assert json.loads(tool_obs)["reservation_id"] == RESERVATION
     assert user_obs == "###STOP###"
+
+
+def test_struct_record_says_it_perturbs_tool_responses(offline):
+    """Struct records before 938b739 perturbed tool definitions only; a record
+    must say which instrument produced it."""
+    rec = run_episode(enable_structural_perturbations=True, perturbation_strength="medium")
+
+    assert rec["structural_perturbation"]["perturbs_tool_responses"] is True
+
+
+class LooksUpAMissingReservation(ScriptedAgent):
+    """The lookup fails: the env answers with a plain-text error, not JSON."""
+
+    reservation = "NOSUCH"
+
+
+def test_struct_passes_a_non_json_tool_error_through(offline, monkeypatch):
+    monkeypatch.setattr(tc_agent, "ToolCallingAgent", LooksUpAMissingReservation)
+    rec = run_episode(enable_structural_perturbations=True, perturbation_strength="medium")
+
+    tool_obs, _ = tool_and_user_observations(rec)
+    env = airline_env()
+    env.reset(task_index=TASK_INDEX)
+    direct = env.step(Action(name="get_reservation_details", kwargs={"reservation_id": "NOSUCH"}))
+    assert direct.observation.startswith("Error:")
+    assert tool_obs == direct.observation
+
+
+class CancelsUnderTheSchemaItWasGiven(ScriptedAgent):
+    """Does the task's gold action, under the (perturbed) parameter name its
+    schema shows, then says goodbye."""
+
+    def solve(self, env, task_index=None):
+        env.reset(task_index=task_index)
+        schema = next(
+            t["function"] for t in self.tools_info if t["function"]["name"] == "cancel_reservation"
+        )
+        (param,) = schema["parameters"]["properties"]
+        env.step(Action(name="cancel_reservation", kwargs={param: RESERVATION}))
+        bye = env.step(Action(name=RESPOND_ACTION_NAME, kwargs={"content": "Goodbye"}))
+        messages = [
+            {"role": "assistant", "content": "Goodbye"},
+            {"role": "user", "content": bye.observation},
+        ]
+        return SolveResult(reward=env.reward, info={}, messages=messages)
+
+
+def test_struct_scores_the_reward_replay_through_the_perturbed_step(offline, monkeypatch):
+    """The replay runs through the perturbed env.step too: its gold kwargs carry
+    the original names, must reach the env unchanged, and the episode must score
+    as the unperturbed one would."""
+    monkeypatch.setattr(tc_agent, "ToolCallingAgent", CancelsUnderTheSchemaItWasGiven)
+    rec = run_episode(enable_structural_perturbations=True, perturbation_strength="medium")
+
+    assert rec["reward"] == 1.0
+    assert rec["taken_actions"][0] == {
+        "name": "cancel_reservation",
+        "kwargs": {"reservation_id": RESERVATION},
+    }
+    assert rec["reward_replay_actions"] == rec["task"]["actions"]
+
+
+def test_in_run_abstention_says_which_actions_it_saw(offline):
+    rec = run_episode()
+
+    assert rec["abstention"]["actions_view"] == "agent"
+
+
+def test_in_run_compliance_monitor_ignores_the_reward_replay(offline, monkeypatch):
+    """The replayed gold cancel_reservation is not the agent's: a destructive-op
+    check that flags it would charge the agent with the answer key."""
+    from hal.utils.compliance_checkers import ComplianceMonitor
+
+    real = ComplianceMonitor._check_destructive_operations
+
+    def flags_cancellations(self, operation="", **kwargs):
+        if "cancel_reservation" in operation:
+            return real(self, operation="delete " + operation)
+        return True, None
+
+    monkeypatch.setattr(ComplianceMonitor, "_check_destructive_operations", flags_cancellations)
+    rec = run_episode(
+        enable_compliance_monitoring=True, compliance_constraints="no_destructive_ops"
+    )
+
+    assert names(rec["reward_replay_actions"]) == ["cancel_reservation"]
+    assert rec["compliance"]["violation_count"] == 0

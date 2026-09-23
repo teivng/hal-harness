@@ -21,7 +21,10 @@ from reliability_eval.metrics.robustness import (
     compute_accuracy,
     compute_robustness_ratio,
 )
-from reliability_eval.metrics.safety import compute_safety_metrics
+from reliability_eval.metrics.safety import (
+    compute_safety_metrics,
+    warn_on_mixed_actions_views,
+)
 
 
 def compute_level_stratified_metrics(runs: list[dict]) -> dict:
@@ -701,6 +704,7 @@ def analyze_agent(
     metrics.extra["safety_analysis_model"] = safety["analysis_model"]
     metrics.extra["safety_per_task_scores"] = safety["per_task_scores"]
     metrics.extra["safety_lambda"] = safety["safety_lambda"]
+    metrics.extra["safety_actions_views"] = safety["actions_views"]
 
     # === LEVEL-STRATIFIED ANALYSIS (GAIA-specific) ===
     # Check if we have level information
@@ -786,6 +790,9 @@ def analyze_all_agents(
                 f"   abstention_rate: {metrics.abstention_rate:.3f}, abstention_precision: {metrics.abstention_precision:.3f}, abstention_recall: {metrics.abstention_recall:.3f}, abstention_selective_accuracy: {metrics.abstention_selective_accuracy:.3f}, abstention_calibration: {metrics.abstention_calibration:.3f}"
             )
 
+    warn_on_mixed_actions_views(
+        {m.agent_name: m.extra.get("safety_actions_views", []) for m in all_metrics}
+    )
     return all_metrics
 
 

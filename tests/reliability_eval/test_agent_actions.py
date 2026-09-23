@@ -8,8 +8,19 @@ actions + that replay. Newer records carry the replay in reward_replay_actions.
 import json
 from types import SimpleNamespace
 
-from reliability_eval.loaders.actions import KEEP_REWARD_REPLAY_ENV, agent_actions
+import pytest
+
+from reliability_eval.loaders.actions import (
+    KEEP_REWARD_REPLAY_ENV,
+    actions_view,
+    agent_actions,
+    judged_view,
+)
 from reliability_eval.loaders.results import extract_minimal_eval_data
+from reliability_eval.metrics.safety import (
+    compute_safety_metrics,
+    warn_on_mixed_actions_views,
+)
 from reliability_eval.phases import abstention, safety
 from reliability_eval.types import EvaluationLog
 
@@ -18,6 +29,12 @@ CANCEL = {"name": "cancel_reservation", "kwargs": {"reservation_id": "Z7GOZK"}}
 TRANSFER = {"name": "transfer_to_human_agents", "kwargs": {"summary": "x"}}
 BYE = {"name": "respond", "kwargs": {"content": "Goodbye"}}
 TASK = {"user_id": "u", "instruction": "cancel", "actions": [CANCEL], "outputs": []}
+# A scored episode's transcript ends with the customer's stop (tau-bench's
+# ToolCallingAgent appends the customer's reply after every `respond`).
+SCORED = [
+    {"role": "assistant", "content": "Goodbye"},
+    {"role": "user", "content": "###STOP###"},
+]
 
 
 def legacy(taken, task=TASK, **extra):
@@ -53,19 +70,31 @@ class TestAgentActions:
         rec = legacy([LOOKUP, TRANSFER], task={**TASK, "actions": [TRANSFER]})
         assert agent_actions(rec) == [LOOKUP, TRANSFER]
 
-    def test_matches_the_transcript_rule(self):
-        # Every action but the replay comes from one assistant message.
-        history = [
-            {"role": "system", "content": "wiki"},
-            {"role": "user", "content": "hi"},
-            {"role": "assistant", "content": "", "tool_calls": [{}]},
-            {"role": "tool", "content": "{}"},
-            {"role": "assistant", "content": "Goodbye"},
-            {"role": "user", "content": "###STOP###"},
-        ]
+    def test_scored_transcript_drops_the_replay(self):
+        rec = legacy([LOOKUP, BYE, CANCEL], conversation_history=SCORED)
+        assert agent_actions(rec) == [LOOKUP, BYE]
+
+    def test_unscored_transcript_keeps_a_tail_that_matches_the_gold(self):
+        # Step cap: the customer answered the goodbye without ###STOP###, and the
+        # agent's own last action happens to be the gold one.
+        history = [*SCORED[:1], {"role": "user", "content": "Wait, one more thing."}]
         rec = legacy([LOOKUP, BYE, CANCEL], conversation_history=history)
-        n = sum(m["role"] == "assistant" for m in history)
-        assert agent_actions(rec) == rec["taken_actions"][:n]
+        assert agent_actions(rec) == [LOOKUP, BYE, CANCEL]
+
+    @pytest.mark.parametrize("end", ["customer_stop", "terminal_tool:transfer_to_human_agents"])
+    def test_scored_cli_episode_drops_the_replay(self, end):
+        rec = legacy([LOOKUP, BYE, CANCEL], scaffold={"name": "opencode", "end_reason": end})
+        assert agent_actions(rec) == [LOOKUP, BYE]
+
+    @pytest.mark.parametrize("end", ["step_cap", "cli_no_reply"])
+    def test_unscored_cli_episode_keeps_its_actions(self, end):
+        # taubench_ocode_qwen3_4b fault_rep5 task 36: step cap, and the agent's
+        # 30th action (get_reservation_details) equals the replay.
+        task = {**TASK, "actions": [LOOKUP, TRANSFER]}
+        rec = legacy(
+            [BYE, BYE, LOOKUP], task=task, scaffold={"name": "opencode", "end_reason": end}
+        )
+        assert agent_actions(rec) == [BYE, BYE, LOOKUP]
 
     def test_non_taubench_record_is_kept(self):
         rec = {"reward": 1, "taken_actions": [BYE, CANCEL], "task": "a GAIA question"}
@@ -80,6 +109,19 @@ class TestAgentActions:
         assert agent_actions(legacy([LOOKUP, BYE, CANCEL])) == [LOOKUP, BYE, CANCEL]
         split = legacy([LOOKUP, BYE], reward_replay_actions=[CANCEL])
         assert agent_actions(split) == [LOOKUP, BYE, CANCEL]
+
+
+class TestActionsView:
+    def test_default_view_is_the_agents(self):
+        assert actions_view() == "agent"
+
+    def test_legacy_view(self, monkeypatch):
+        monkeypatch.setenv(KEEP_REWARD_REPLAY_ENV, "1")
+        assert actions_view() == "agent+replay"
+
+    def test_an_unstamped_judgement_saw_the_replay(self):
+        assert judged_view({"analyzed": True}) == "agent+replay"
+        assert judged_view({"analyzed": True, "actions_view": "agent"}) == "agent"
 
 
 class TestLoader:
@@ -145,28 +187,88 @@ class FakeAnalyzer:
         return SimpleNamespace(errors=[], S_cost=0.0, S_tail_max=0.0)
 
 
-def test_safety_judge_sees_only_the_agents_actions(tmp_path, monkeypatch):
-    import hal.utils.llm_log_analyzer as analyzer_module
-
-    monkeypatch.setattr(analyzer_module, "LLMLogAnalyzer", FakeAnalyzer)
-    FakeAnalyzer.seen = []
-    history = [{"role": "assistant", "content": "Goodbye"}]
-    upload = write_run(tmp_path, legacy([LOOKUP, BYE, CANCEL], conversation_history=history))
-
-    n = safety.run_safety_phase(
+def judge(tmp_path, **kwargs):
+    return safety.run_safety_phase(
         [({"name": "agentx"}, {}, "taubench_airline")],
         tmp_path,
         "judge",
         ["no_pii_exposure"],
         evaluation_log(),
         tmp_path / "log.json",
+        **kwargs,
     )
 
-    assert n == 1
-    assert FakeAnalyzer.seen == [("compliance", [LOOKUP, BYE]), ("severity", [LOOKUP, BYE])]
-    # the stored record itself is not rewritten
+
+@pytest.fixture
+def fake_judge(monkeypatch):
+    import hal.utils.llm_log_analyzer as analyzer_module
+
+    monkeypatch.setattr(analyzer_module, "LLMLogAnalyzer", FakeAnalyzer)
+    FakeAnalyzer.seen = []
+    return FakeAnalyzer.seen
+
+
+# The transcripts below end with the customer's ###STOP###, as a scored
+# tau-bench transcript does. They used to end with the agent's goodbye, which
+# no tau-bench transcript does and which the tightened rule reads as unscored.
+
+
+def test_safety_judge_sees_only_the_agents_actions(tmp_path, fake_judge):
+    upload = write_run(tmp_path, legacy([LOOKUP, BYE, CANCEL], conversation_history=SCORED))
+
+    assert judge(tmp_path) == 1
+    assert fake_judge == [("compliance", [LOOKUP, BYE]), ("severity", [LOOKUP, BYE])]
+    # the stored record keeps its actions, and the verdict says what it saw
     stored = json.loads(upload.read_text())["raw_eval_results"]["1"]
     assert stored["taken_actions"] == [LOOKUP, BYE, CANCEL]
+    assert stored["llm_safety"]["actions_view"] == "agent"
+
+
+def test_safety_judge_stamps_the_legacy_view(tmp_path, fake_judge, monkeypatch):
+    monkeypatch.setenv(KEEP_REWARD_REPLAY_ENV, "1")
+    upload = write_run(tmp_path, legacy([LOOKUP, BYE, CANCEL], conversation_history=SCORED))
+
+    judge(tmp_path)
+    assert fake_judge[0] == ("compliance", [LOOKUP, BYE, CANCEL])
+    stored = json.loads(upload.read_text())["raw_eval_results"]["1"]
+    assert stored["llm_safety"]["actions_view"] == "agent+replay"
+
+
+def prior_verdict(**extra):
+    return {"analyzed": True, "model": "judge", "compliance_violations": [], **extra}
+
+
+@pytest.mark.parametrize(
+    "prior, rejudged",
+    [
+        (prior_verdict(), True),  # judged before the split: it saw the replay
+        (prior_verdict(actions_view="agent+replay"), True),
+        (prior_verdict(actions_view="agent"), False),
+        ({"analyzed": False, "error": "truncated"}, True),
+    ],
+)
+def test_resumed_judge_skips_only_verdicts_on_the_current_view(
+    tmp_path, fake_judge, monkeypatch, prior, rejudged
+):
+    monkeypatch.setenv("HAL_SAFETY_SKIP_ANALYZED", "1")
+    rec = legacy([LOOKUP, BYE, CANCEL], conversation_history=SCORED, llm_safety=prior)
+    write_run(tmp_path, rec)
+
+    assert judge(tmp_path) == int(rejudged)
+
+
+def test_a_redo_rejudges_every_task(tmp_path, fake_judge, monkeypatch):
+    """skip_analyzed=False overrides an inherited HAL_SAFETY_SKIP_ANALYZED=1:
+    the posthoc jobs export it, and a redo must not keep a single old verdict."""
+    monkeypatch.setenv("HAL_SAFETY_SKIP_ANALYZED", "1")
+    rec = legacy(
+        [LOOKUP, BYE, CANCEL],
+        conversation_history=SCORED,
+        llm_safety=prior_verdict(actions_view="agent"),
+    )
+    write_run(tmp_path, rec)
+
+    assert judge(tmp_path, skip_analyzed=False) == 1
 
 
 def test_abstention_sees_only_the_agents_actions(tmp_path, monkeypatch):
@@ -178,8 +280,7 @@ def test_abstention_sees_only_the_agents_actions(tmp_path, monkeypatch):
         return real(conversation_history, actions_taken)
 
     monkeypatch.setattr(abstention, "detect_abstention", spy)
-    history = [{"role": "assistant", "content": "Goodbye"}]
-    write_run(tmp_path, legacy([LOOKUP, BYE, CANCEL], conversation_history=history))
+    upload = write_run(tmp_path, legacy([LOOKUP, BYE, CANCEL], conversation_history=SCORED))
 
     abstention.run_abstention_phase(
         [({"name": "agentx"}, {}, "taubench_airline")],
@@ -189,3 +290,25 @@ def test_abstention_sees_only_the_agents_actions(tmp_path, monkeypatch):
     )
 
     assert seen == [[LOOKUP, BYE]]
+    stored = json.loads(upload.read_text())["raw_eval_results"]["1"]
+    assert stored["abstention"]["actions_view"] == "agent"
+
+
+class TestMixedViews:
+    def runs(self, *verdicts):
+        return [{"raw_eval_results": {str(i): {"llm_safety": v} for i, v in enumerate(verdicts)}}]
+
+    def test_safety_metrics_report_the_views_they_read(self):
+        out = compute_safety_metrics(
+            self.runs(prior_verdict(), prior_verdict(actions_view="agent"))
+        )
+        assert out["actions_views"] == ["agent", "agent+replay"]
+
+    def test_a_panel_on_one_view_is_quiet(self, capsys):
+        assert not warn_on_mixed_actions_views({"a": ["agent"], "b": ["agent"], "c": []})
+        assert capsys.readouterr().err == ""
+
+    def test_a_panel_mixing_views_is_flagged(self, capsys):
+        assert warn_on_mixed_actions_views({"a": ["agent"], "b": ["agent+replay"]})
+        err = capsys.readouterr().err
+        assert "WARNING" in err and "a: agent" in err and "b: agent+replay" in err

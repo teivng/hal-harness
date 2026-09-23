@@ -683,7 +683,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
     # Apply tau-bench specific perturbations to test agent robustness:
     # 1. Tool parameter names (what the agent must use to call tools)
     # 2. Tool responses (what the agent receives back)
-    # 3. Wiki/knowledge base format
+    # 3. Wiki/knowledge base format (a no-op, see 2. below)
     perturbed_tools_info = isolated_env.tools_info
     perturbed_wiki = isolated_env.wiki
 
@@ -694,7 +694,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
             taubench_perturbator.perturb_tool_definitions(isolated_env.tools_info)
         )
 
-        # 2. Perturb the wiki (knowledge base)
+        # 2. "Perturb" the wiki. A no-op: perturb_tool_response only rewrites
+        # JSON and returns anything else unchanged, and the wiki is markdown.
         perturbed_wiki = taubench_perturbator.perturb_tool_response(isolated_env.wiki)
 
         # 3. Wrap the environment's step function to perturb tool responses
@@ -945,6 +946,7 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         "early_termination": abstention_result["early_termination"],
         "evidence": abstention_result["evidence"],
         "scores_by_type": abstention_result["scores_by_type"],
+        "actions_view": "agent",  # the replay is stored apart (loaders/actions.py)
     }
 
     # ========== RELIABILITY METRICS RESULTS ==========
@@ -983,6 +985,8 @@ def run(input: dict[str, dict], **kwargs) -> dict[str, str]:
         result[task_id]["structural_perturbation"] = {
             "enabled": True,
             "perturbation_type": "taubench",
+            # records before 938b739 perturbed tool definitions only
+            "perturbs_tool_responses": True,
             "perturbation_count": summary["total_perturbations"],
             "perturbations_by_type": summary["by_type"],
             "applied_perturbations": taubench_perturbator.applied_perturbations[

@@ -7,7 +7,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 
-from reliability_eval.loaders.actions import agent_actions
+from reliability_eval.loaders.actions import (
+    ACTIONS_VIEW_KEY,
+    actions_view,
+    agent_actions,
+    judged_view,
+)
 from reliability_eval.types import EvaluationLog, RunResult
 
 
@@ -49,6 +54,8 @@ def _analyze_task(task_info, constraints, analyzer, safety_model):
             ],
             "num_violations": len(compliance_result.violations),
             "constraints_checked": constraints,
+            # which actions the judge was shown (loaders/actions.py)
+            ACTIONS_VIEW_KEY: actions_view(),
         }
 
         # Add severity results if task failed
@@ -104,6 +111,7 @@ def run_safety_phase(
     max_concurrent: int = 1,
     safety_api_base: str | None = None,
     safety_api_key: str | None = None,
+    skip_analyzed: bool | None = None,
 ) -> int:
     """
     Run LLM-based safety analysis on existing traces.
@@ -118,7 +126,14 @@ def run_safety_phase(
     otherwise falls back to default_constraints.
 
     Computes: safety_harm_severity (error severity), safety_compliance (compliance)
+
+    skip_analyzed leaves tasks that already carry a successful judgement made on
+    the current actions view untouched, so a retry only re-judges the ones that
+    failed. None reads HAL_SAFETY_SKIP_ANALYZED=1; False re-judges every task.
     """
+    if skip_analyzed is None:
+        skip_analyzed = os.environ.get("HAL_SAFETY_SKIP_ANALYZED") == "1"
+    view = actions_view()
     print("\n" + "=" * 80)
     print("🛡️  PHASE: SAFETY ANALYSIS (safety_harm_severity, safety_compliance)")
     print("=" * 80)
@@ -236,12 +251,17 @@ def run_safety_phase(
                     print(f"      ⚠️  Task {task_id}: No trace data")
                     continue
 
-                # Resumable re-runs: with HAL_SAFETY_SKIP_ANALYZED=1, leave tasks
-                # that already carry a successful judgement untouched so a retry
-                # only re-judges the ones that failed (e.g. truncated JSON).
-                if os.environ.get("HAL_SAFETY_SKIP_ANALYZED") == "1":
+                # Resumable re-runs: leave tasks that already carry a successful
+                # judgement untouched so a retry only re-judges the ones that
+                # failed (e.g. truncated JSON). A judgement made on the other
+                # actions view is not one to keep.
+                if skip_analyzed:
                     prior = task_eval.get("llm_safety")
-                    if isinstance(prior, dict) and prior.get("analyzed"):
+                    if (
+                        isinstance(prior, dict)
+                        and prior.get("analyzed")
+                        and judged_view(prior) == view
+                    ):
                         continue
 
                 success = int(task_eval.get("reward", 0.0))
