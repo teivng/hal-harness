@@ -98,6 +98,7 @@ def strip_agent_prefix(name: str) -> str:
         "qwen3_8b": "Qwen3 8B",
         "qwen3_5_35b_a3b": "Qwen3.5 35B-A3B",
         "qwen3_5_9b": "Qwen3.5 9B",
+        "ternary_bonsai2_27b": "Ternary Bonsai 2 27B",
         # END display_names generated rows
     }
 

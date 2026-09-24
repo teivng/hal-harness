@@ -537,6 +537,11 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
+    # the repo id names the GGUF packaging, not the model
+    "prism-ml/Ternary-Bonsai-2-27B": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
     # END MODEL_PRICES_DICT generated rows
     "openrouter/anthropic/claude-opus-4": {
         "prompt_tokens": 15 / 1e6,

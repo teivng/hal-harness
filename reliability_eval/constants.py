@@ -226,6 +226,11 @@ MODEL_METADATA = {
         "date": "2026-03-02",
         "provider": "Alibaba",
     },
+    # prism-ml/Ternary-Bonsai-2-27B-gguf
+    "taubench_toolcalling_ternary_bonsai2_27b": {
+        "date": "2026-09-16",
+        "provider": "PrismML",
+    },
     # END MODEL_METADATA generated rows
 }
 
@@ -264,7 +269,8 @@ PROVIDER_ORDER = {
     "Zhipu": 4,
     "Ai2": 5,
     "Meta": 6,
-    "Unknown": 7,
+    "PrismML": 7,
+    "Unknown": 8,
 }
 
 # Model size/type categories
@@ -313,6 +319,7 @@ MODEL_CATEGORY = {
     "qwen3_8b": "small",
     "qwen3_5_35b_a3b": "large",
     "qwen3_5_9b": "small",
+    "ternary_bonsai2_27b": "large",
     # END MODEL_CATEGORY generated rows
 }
 
