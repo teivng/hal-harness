@@ -226,6 +226,11 @@ MODEL_METADATA = {
         "date": "2026-03-02",
         "provider": "Alibaba",
     },
+    # Qwen/Qwen3.8-27B
+    "taubench_toolcalling_qwen38_27b": {
+        "date": "2026-08-05",
+        "provider": "Alibaba",
+    },
     # prism-ml/Ternary-Bonsai-2-27B-gguf
     "taubench_toolcalling_ternary_bonsai2_27b": {
         "date": "2026-09-16",
@@ -319,6 +324,7 @@ MODEL_CATEGORY = {
     "qwen3_8b": "small",
     "qwen3_5_35b_a3b": "large",
     "qwen3_5_9b": "small",
+    "qwen38_27b": "large",
     "ternary_bonsai2_27b": "large",
     # END MODEL_CATEGORY generated rows
 }

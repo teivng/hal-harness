@@ -541,6 +541,12 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
+    # must differ from the aux's Qwen/Qwen3.8-27B: litellm_patch tells agent calls from
+    # the user simulator's by model name alone.
+    "qwen3.8-27b-agent": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
     # the repo id names the GGUF packaging, not the model
     "prism-ml/Ternary-Bonsai-2-27B": {
         "prompt_tokens": 0.15 / 1e6,
