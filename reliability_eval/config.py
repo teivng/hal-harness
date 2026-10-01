@@ -8,13 +8,14 @@ from reliability_eval.constants import TAUBENCH_AIRLINE_CLEAN_TASKS
 
 # Shared agent args for the self-hosted open-weight rows (vLLM, OpenAI-compatible).
 # The agent model is served at api_base; the user simulator runs on a separate
-# local server and is always Qwen/Qwen3.8-27B (the standing aux server every job
-# reaches; Qwen/Qwen3-32B for the 66-agent panel before it) so that all rows share
-# one environment.
+# local server and is always Qwen/Qwen3-32B (the standing aux server every job
+# reaches since 2026-10-01, as each job's own aux served it for the 66-agent panel;
+# Qwen/Qwen3.8-27B was the aux for one day and went silent as a customer) so that all
+# rows share one environment.
 _VLLM_EXTRA_AGENT_ARGS = {
     "api_base": "http://127.0.0.1:8001/v1",
     "api_key": "EMPTY",
-    "user_model": "Qwen/Qwen3.8-27B",
+    "user_model": "Qwen/Qwen3-32B",
     "user_provider": "openai",
     "confidence_max_tokens": 4096,
 }
