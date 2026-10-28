@@ -489,7 +489,15 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
+    "gemma4-26b-a4b-think": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
     "zai-org/GLM-4.7-Flash": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
+    "glm-4.7-flash-think": {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
@@ -513,7 +521,15 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.2 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
+    "allenai/Olmo-3.1-32B-Think": {
+        "prompt_tokens": 0.2 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
     "Qwen/Qwen3-30B-A3B-Instruct-2507": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "Qwen/Qwen3-30B-A3B-Thinking-2507": {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
@@ -525,7 +541,15 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
+    "Qwen/Qwen3-4B-Thinking-2507": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
     "Qwen/Qwen3-8B": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "qwen3-8b-think": {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
@@ -533,7 +557,15 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
+    "qwen3.5-35b-a3b-think": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
     "Qwen/Qwen3.5-9B": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
+    "qwen3.5-9b-think": {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
@@ -547,8 +579,17 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,
     },
+    "qwen3.8-27b-agent-think": {
+        "prompt_tokens": 0.1 / 1e6,
+        "completion_tokens": 0.3 / 1e6,
+    },
     # the repo id names the GGUF packaging, not the model
     "prism-ml/Ternary-Bonsai-2-27B": {
+        "prompt_tokens": 0.15 / 1e6,
+        "completion_tokens": 0.6 / 1e6,
+    },
+    # the repo id names the GGUF packaging; -think tells it from the thinking-off record
+    "prism-ml/Ternary-Bonsai-2-27B-think": {
         "prompt_tokens": 0.15 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
