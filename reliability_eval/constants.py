@@ -211,11 +211,6 @@ MODEL_METADATA = {
         "date": "2025-12-15",
         "provider": "Ai2",
     },
-    # allenai/Olmo-3.1-32B-Think
-    "taubench_toolcalling_olmo31_32b_think": {
-        "date": "2025-12-10",
-        "provider": "Ai2",
-    },
     # Qwen/Qwen3-30B-A3B-Instruct-2507
     "taubench_toolcalling_qwen3_30b_a3b": {
         "date": "2025-07-29",
@@ -371,7 +366,6 @@ MODEL_CATEGORY = {
     "gpt_oss_20b": "reasoning",
     "llama33_70b_fp8": "large",
     "olmo31_32b": "large",
-    "olmo31_32b_think": "large",
     "qwen3_30b_a3b": "large",
     "qwen3_30b_a3b_thinking": "large",
     "qwen3_4b": "small",

@@ -521,10 +521,6 @@ MODEL_PRICES_DICT = {
         "prompt_tokens": 0.2 / 1e6,
         "completion_tokens": 0.6 / 1e6,
     },
-    "allenai/Olmo-3.1-32B-Think": {
-        "prompt_tokens": 0.2 / 1e6,
-        "completion_tokens": 0.6 / 1e6,
-    },
     "Qwen/Qwen3-30B-A3B-Instruct-2507": {
         "prompt_tokens": 0.1 / 1e6,
         "completion_tokens": 0.3 / 1e6,

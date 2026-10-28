@@ -17,7 +17,7 @@ _VLLM_EXTRA_AGENT_ARGS = {
     "api_key": "EMPTY",
     "user_model": "Qwen/Qwen3-32B",
     "user_provider": "openai",
-    "confidence_max_tokens": 16384,
+    "confidence_max_tokens": 4096,
 }
 
 # =============================================================================

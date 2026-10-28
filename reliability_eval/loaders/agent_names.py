@@ -95,7 +95,6 @@ def strip_agent_prefix(name: str) -> str:
         "gpt_oss_20b": "gpt-oss 20B",
         "llama33_70b_fp8": "Llama 3.3 70B (FP8)",
         "olmo31_32b": "OLMo 3.1 32B",
-        "olmo31_32b_think": "OLMo 3.1 32B (Think)",
         "qwen3_30b_a3b": "Qwen3 30B-A3B (Instruct 2507)",
         "qwen3_30b_a3b_thinking": "Qwen3 30B-A3B (Thinking 2507)",
         "qwen3_4b": "Qwen3 4B (Instruct 2507)",
