@@ -513,6 +513,11 @@ Respond with ONLY a number between 0 and 100. No explanation needed."""
             "task_reward": reward,
             "model": model_name,
         }
+        # a thinking model reasons before its number: keep that and what the call spent
+        reasoning = getattr(response.choices[0].message, "reasoning_content", None)
+        if reasoning:
+            confidence_details["reasoning"] = reasoning
+            confidence_details["completion_tokens"] = response.usage.completion_tokens
 
         # The call above is traced like every other litellm call of the task:
         # by hal/utils/local_trace.py's callback with Weave off, by Weave with it on.
